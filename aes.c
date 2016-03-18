@@ -14,6 +14,10 @@
 //     ShiftRows
 //     AddRoundKey.
 #include "aes.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <getopt.h>
+#include <stdlib.h>
 
 /*
  * Addition in GF(2^8)
@@ -74,6 +78,15 @@ uint8_t gmul(uint8_t a, uint8_t b) {
 //     out = state
 //   end
 
-void main () {
-  printf("%02x\n", gmul(0x57, 0x83));
+int main (int argc, char **argv) {
+  char* cvalue = NULL;
+  int c;
+
+  if (c = getopt (argc, argv, "l") == -1) {
+    printf ("Usage: aes -l {128, 192, 256}\nThe argument for -l is the key length.\n\n");
+    exit(0);
+  }
+
+  cvalue = optarg;
+  printf("LENGTH and %s", cvalue);
 }
