@@ -13,18 +13,20 @@
 //     SubBytes
 //     ShiftRows
 //     AddRoundKey.
+
 #include "aes.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
  * Addition in GF(2^8)
  * http://en.wikipedia.org/wiki/Finite_field_arithmetic
  */
 uint8_t gadd(uint8_t a, uint8_t b) {
-	return a^b;
+  return a^b;
 }
 
 /*
@@ -32,7 +34,7 @@ uint8_t gadd(uint8_t a, uint8_t b) {
  * http://en.wikipedia.org/wiki/Finite_field_arithmetic
  */
 uint8_t gsub(uint8_t a, uint8_t b) {
-	return a^b;
+  return a^b;
 }
 
 /* From Wikipedia
@@ -43,8 +45,8 @@ uint8_t gsub(uint8_t a, uint8_t b) {
  * (the other way being to do carry-less multiplication followed by a modular reduction)
  */
 uint8_t gmul(uint8_t a, uint8_t b) {
-	uint8_t p = 0; /* the product of the multiplication */
-	while (b) {
+  uint8_t p = 0; /* the product of the multiplication */
+  while (b) {
             if (b & 1) /* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
                 p ^= a; /* since we're in GF(2^m), addition is an XOR */
 
@@ -53,8 +55,8 @@ uint8_t gmul(uint8_t a, uint8_t b) {
             else
                 a <<= 1; /* equivalent to a*2 */
             b >>= 1; /* equivalent to b // 2 */
-	}
-	return p;
+  }
+  return p;
 }
 
 // Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
@@ -79,14 +81,24 @@ uint8_t gmul(uint8_t a, uint8_t b) {
 //   end
 
 int main (int argc, char **argv) {
-  char* cvalue = NULL;
-  int c;
+  char* keylen_in = NULL;
+  int len_opt;
+  int keylen;
 
-  if (c = getopt (argc, argv, "l") == -1) {
+  // =======================
+  // GET KEY LENGTH AS PARAM
+  // =======================
+  if (len_opt = getopt (argc, argv, "l:") == -1) {
     printf ("Usage: aes -l {128, 192, 256}\nThe argument for -l is the key length.\n\n");
     exit(0);
   }
 
-  cvalue = optarg;
-  printf("LENGTH and %s", cvalue);
+  keylen_in = optarg;
+
+  if (strcmp(keylen_in, "128") == 0 || strcmp(keylen_in, "192") == 0 || strcmp(keylen_in, "256") == 0) {
+    keylen = atoi(keylen_in);
+  } else {
+    printf ("Usage: aes -l {128, 192, 256}\nThe argument for -l is the key length.\n\n");
+    exit(0);
+  }
 }
