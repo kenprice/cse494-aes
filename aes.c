@@ -14,27 +14,6 @@
 //     ShiftRows
 //     AddRoundKey.
 
-// Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
-//   begin
-//     byte  state[4,Nb]
-//     state = in
-//     AddRoundKey(state, w[0, Nb-1])
-//     // See Sec. 5.1.4
-//     for round = 1 step 1 to Nr–1
-//     SubBytes(state)
-//     // See Sec. 5.1.1
-//     ShiftRows(state)
-//     // See Sec. 5.1.2
-//     MixColumns(state)
-//     // See Sec. 5.1.3
-//     AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
-//     end for
-//     SubBytes(state)
-//     ShiftRows(state)
-//     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
-//     out = state
-//   end
-
 #include "aes.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -49,7 +28,7 @@
 
 /*
 ================================================================================
-MATH
+MATH OPS
 ================================================================================
 */
 
@@ -91,18 +70,49 @@ uint8_t gmul(uint8_t a, uint8_t b) {
   return p;
 }
 
-/*
-================================================================================
-DEBUGGING
-================================================================================
-*/
-
 void print_hex(uint8_t* in, int len) {
   for (int i = 0; i < len; i++) {
     printf("0x%02X ", in[i]);
     if ((i + 1) % 4 == 0) printf("\n");
   }
   printf("\n");
+}
+
+/*
+================================================================================
+CIPHER
+--------------------------------------------------------------------------------
+Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+  begin
+    byte  state[4,Nb]
+    state = in
+    AddRoundKey(state, w[0, Nb-1])
+    // See Sec. 5.1.4
+    for round = 1 step 1 to Nr–1
+    SubBytes(state)
+    // See Sec. 5.1.1
+    ShiftRows(state)
+    // See Sec. 5.1.2
+    MixColumns(state)
+    // See Sec. 5.1.3
+    AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+    end for
+    SubBytes(state)
+    ShiftRows(state)
+    AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
+    out = state
+  end
+================================================================================
+*/
+
+void cipher(uint8_t* out, uint8_t* in, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+  uint8_t* state;
+
+  state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+  memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+  print_hex(in, 16);
+  print_hex(state, 16);
 }
 
 int main(int argc, char **argv) {
@@ -150,13 +160,7 @@ int main(int argc, char **argv) {
     0x88, 0x99, 0xaa, 0xbb,
     0xcc, 0xdd, 0xee, 0xff};
 
-  uint8_t* state;
+  uint8_t* out_block;
 
-  state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-  memcpy(state, in_block, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-
-  print_hex(in_block, 16);
-  print_hex(state, 16);
-
-  
+  cipher(out_block, in_block, 4, n_k, n_r);
 }
