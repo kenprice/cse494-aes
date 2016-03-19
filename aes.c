@@ -21,12 +21,41 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG 1
 #define USAGE_MESSAGE "Usage: aes -l {128, 192, 256}\nThe argument for -l is the key length in bits.\n\n"
 
 // AES-specific constants
 #define BLOCK_LENGTH_IN_BYTES 16
+#define MAX_KEY_LENGTH_IN_BYTES 32
 
 const uint8_t n_b = 4; // Length of block in 4-byte words
+
+/*
+================================================================================
+DEBUG
+================================================================================
+*/
+
+void debug_print_hex(uint8_t* in, int len) {
+  if (!DEBUG) return;
+
+  for (int i = 0; i < len; i++) {
+    printf("%02X ", in[i]);
+    if ((i + 1) % 4 == 0) printf("\n");
+  }
+}
+
+void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
+  if (!DEBUG) return;
+
+  for (int i = 0; i < n_r + 1; i++) {
+    printf("Round %2d\t", i + 1);
+    for (int j = 0; j < n_b; j++) {
+      printf("%02X %02X %02X %02X    ", key_schedule[i+j][0], key_schedule[i+j][1], key_schedule[i+j][3], key_schedule[i+j][4]);
+    }
+    printf("\n\n");
+  }
+}
 
 /*
 ================================================================================
@@ -72,14 +101,6 @@ uint8_t gmul(uint8_t a, uint8_t b) {
   return p;
 }
 
-void print_hex(uint8_t* in, int len) {
-  for (int i = 0; i < len; i++) {
-    printf("0x%02X ", in[i]);
-    if ((i + 1) % 4 == 0) printf("\n");
-  }
-  printf("\n");
-}
-
 /*
 ================================================================================
 CIPHER
@@ -113,8 +134,8 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
-  print_hex(in, 16);
-  print_hex(state, 16);
+  debug_print_hex(in, 16);
+  debug_print_hex(state, 16);
 }
 
 /*
@@ -161,9 +182,10 @@ void rot_word(uint8_t* out_word) {
   out_word[3] = aux;
 }
 
-void key_expansion(uint8_t** out_words, uint8_t* key, uint8_t n_k, uint8_t n_r) {
+uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
   // Input: key
   // Output: Nb * (Nr + 1) array of words (key schedule)
+  uint8_t** out_words;
   uint8_t num_words = n_b * (n_r + 1);
   uint8_t temp[4];
   uint8_t r_con[num_words][4];  // Round constants
@@ -205,30 +227,46 @@ void key_expansion(uint8_t** out_words, uint8_t* key, uint8_t n_k, uint8_t n_r) 
     out_words[i][2] = out_words[i-n_k][2] ^ temp[2];
     out_words[i][3] = out_words[i-n_k][3] ^ temp[3];
   }
+
+  return out_words;
 }
 
 int main(int argc, char **argv) {
-  char* keylen_in = NULL;
-  int len_opt;
+  uint8_t n_k;                           // Key length in bytes
+  uint8_t n_r;                           // Number of rounds
   int keylen;
-  uint8_t n_k;        // Key length in bytes
-  uint8_t n_r;        // Number of rounds
+  char* keylen_in = NULL;                // User input from options
+  char* key_string = NULL;
+  int opt, l_flag = 0, k_flag = 0, i_flag = 0;
 
   // =======================
   // GET KEY LENGTH AS PARAM
   // =======================
-  if (len_opt = getopt (argc, argv, "l:") == -1) {
-    printf (USAGE_MESSAGE);
-    exit(0);
-  }
 
-  keylen_in = optarg;
+  while ((opt = getopt (argc, argv, "l:k:")) != -1) {
+    switch (opt) {
+      case 'l':
+        // User option to specify key length
+        keylen_in = optarg;
+        if (strcmp(keylen_in, "128") == 0 || strcmp(keylen_in, "192") == 0 || strcmp(keylen_in, "256") == 0) {
+          keylen = atoi(keylen_in);
+        } else {
+          printf (USAGE_MESSAGE);
+          exit(0);
+        }
+        l_flag = 1;
+        break;
 
-  if (strcmp(keylen_in, "128") == 0 || strcmp(keylen_in, "192") == 0 || strcmp(keylen_in, "256") == 0) {
-    keylen = atoi(keylen_in);
-  } else {
-    printf (USAGE_MESSAGE);
-    exit(0);
+      case 'k':
+        // User option to specify key as hex string
+        key_string = optarg;
+        k_flag = 1;
+        break;
+
+      default:
+        printf (USAGE_MESSAGE);
+        exit(0);
+    }
   }
 
   // Compute number of rounds and keylen in bytes
@@ -254,5 +292,16 @@ int main(int argc, char **argv) {
 
   uint8_t* out_block;
 
-  cipher(out_block, in_block, 4, n_k, n_r);
+  //cipher(out_block, in_block, 4, n_k, n_r);
+
+  // TEST TEST TEST TEST TEST //
+  uint8_t** key_schedule;
+  uint8_t test_key[] = {
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00};
+  key_schedule = key_expansion(test_key, 4, 10);
+  debug_print_key_expansion(key_schedule, n_r);
+  // TEST TEST TEST TEST TEST //
 }
