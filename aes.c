@@ -43,6 +43,7 @@ void debug_print_hex(uint8_t* in, int len) {
     printf("%02X ", in[i]);
     if ((i + 1) % 4 == 0) printf("\n");
   }
+  printf("\n");
 }
 
 void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
@@ -112,13 +113,13 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
     AddRoundKey(state, w[0, Nb-1])
     // See Sec. 5.1.4
     for round = 1 step 1 to Nr–1
-    SubBytes(state)
-    // See Sec. 5.1.1
-    ShiftRows(state)
-    // See Sec. 5.1.2
-    MixColumns(state)
-    // See Sec. 5.1.3
-    AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+      SubBytes(state)
+      // See Sec. 5.1.1
+      ShiftRows(state)
+      // See Sec. 5.1.2
+      MixColumns(state)
+      // See Sec. 5.1.3
+      AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
     end for
     SubBytes(state)
     ShiftRows(state)
@@ -128,7 +129,26 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 ================================================================================
 */
 
-void cipher(uint8_t* out, uint8_t* in, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+void add_round_key(uint8_t** state, uint8_t** key_schedule, uint8_t rnd) {
+  // xor the block state with the round key (block of the expanded key)
+  for (int i = 0; i < n_b; i++) {
+    (*state)[i*n_b+0] ^= key_schedule[i+rnd][0];
+    (*state)[i*n_b+1] ^= key_schedule[i+rnd][1];
+    (*state)[i*n_b+2] ^= key_schedule[i+rnd][2];
+    (*state)[i*n_b+3] ^= key_schedule[i+rnd][3];
+  }
+}
+
+// void sub_bytes(uint8_t** state) {
+//   for (int i = 0; i < n_b; i++) {
+//     (*state)[i*n_b+0] = s_box[;
+//     (*state)[i*n_b+1] = s_box[;
+//     (*state)[i*n_b+2] = s_box[;
+//     (*state)[i*n_b+3] = s_box[;
+//   }
+// }
+
+void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t* state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
@@ -136,6 +156,27 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
 
   debug_print_hex(in, 16);
   debug_print_hex(state, 16);
+
+  add_round_key(&state, key_schedule, 0);
+
+  debug_print_hex(state, 16);
+
+  for (int i = 0; i < n_r; i++) {
+
+  }
+  // for round = 1 step 1 to Nr–1
+  //   SubBytes(state)
+  //   // See Sec. 5.1.1
+  //   ShiftRows(state)
+  //   // See Sec. 5.1.2
+  //   MixColumns(state)
+  //   // See Sec. 5.1.3
+  //   AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+  // end for
+  // SubBytes(state)
+  // ShiftRows(state)
+  // AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
+  // out = state
 }
 
 /*
@@ -231,6 +272,12 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
   return out_words;
 }
 
+/*
+================================================================================
+MAIN
+================================================================================
+*/
+
 int main(int argc, char **argv) {
   uint8_t n_k;                           // Key length in bytes
   uint8_t n_r;                           // Number of rounds
@@ -292,8 +339,6 @@ int main(int argc, char **argv) {
 
   uint8_t* out_block;
 
-  //cipher(out_block, in_block, 4, n_k, n_r);
-
   // TEST TEST TEST TEST TEST //
   uint8_t** key_schedule;
   uint8_t test_key[] = {
@@ -304,4 +349,6 @@ int main(int argc, char **argv) {
   key_schedule = key_expansion(test_key, 4, 10);
   debug_print_key_expansion(key_schedule, n_r);
   // TEST TEST TEST TEST TEST //
+
+  cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
 }
