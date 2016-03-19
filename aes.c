@@ -150,6 +150,29 @@ void sub_bytes(uint8_t* state) {
   }
 }
 
+void shift_rows(uint8_t* state) {
+  uint8_t state_temp[BLOCK_LENGTH_IN_BYTES];
+  memcpy(state_temp, state, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+  // Row 1, shift left once
+  state[1+0] = state_temp[1+4];
+  state[1+4] = state_temp[1+8];
+  state[1+8] = state_temp[1+12];
+  state[1+12] = state_temp[1+0];
+
+  // Row 2, shift left twice
+  state[2+0]  = state_temp[2+8];
+  state[2+4]  = state_temp[2+12];
+  state[2+8]  = state_temp[2+0];
+  state[2+12] = state_temp[2+4];
+
+  // Row 3, shift left once
+  state[3+0]  = state_temp[3+12];
+  state[3+4]  = state_temp[3+0];
+  state[3+8]  = state_temp[3+4];
+  state[3+12] = state_temp[3+8];
+}
+
 void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t* state;
 
@@ -165,7 +188,7 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
 
   for (int i = 0; i < n_r; i++) {
     sub_bytes(state);
-    
+    shift_rows(state);
   }
   // for round = 1 step 1 to Nr–1
   //   SubBytes(state)
