@@ -26,6 +26,8 @@
 // AES-specific constants
 #define BLOCK_LENGTH_IN_BYTES 16
 
+const uint8_t n_b = 4; // Length of block in 4-byte words
+
 /*
 ================================================================================
 MATH OPS
@@ -115,12 +117,102 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   print_hex(state, 16);
 }
 
+/*
+===================================================================
+KEY EXPANSION
+-------------------------------------------------------------------
+KeyExpansion(byte key[4*Nk], word w[Nb*(Nr+1)], Nk)
+  begin
+    word  temp
+    i = 0
+    while (i < Nk)
+      w[i] = word(key[4*i], key[4*i+1], key[4*i+2], key[4*i+3])
+      i = i+1
+    end while
+    i = Nk
+    while (i < Nb * (Nr+1)]
+      temp = w[i-1]
+      if (i mod Nk = 0)
+        temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
+      else if (Nk > 6 and i mod Nk = 4)
+        temp = SubWord(temp)
+      end if
+      w[i] = w[i-Nk] xor temp
+      i = i + 1
+    end while
+  end
+===================================================================
+*/
+void sub_word(uint8_t* out_word) {
+  // Input: 4-byte word
+  // Output: 4-byte word with substitution using S-box
+  for (int i = 0; i < 4; i++)
+    out_word[i] = s_box[out_word[i]];
+}
+
+void rot_word(uint8_t* out_word) {
+  // Input: 4-byte word
+  // Output: Same 4-byte word, but rotated to the left cyclically
+  //   e.g. [a0, a1, a2, a3] => [a1, a2, a3, a0]
+  uint8_t aux = out_word[0];
+  out_word[0] = out_word[1];
+  out_word[1] = out_word[2];
+  out_word[2] = out_word[3];
+  out_word[3] = aux;
+}
+
+void key_expansion(uint8_t** out_words, uint8_t* key, uint8_t n_k, uint8_t n_r) {
+  // Input: key
+  // Output: Nb * (Nr + 1) array of words (key schedule)
+  uint8_t num_words = n_b * (n_r + 1);
+  uint8_t temp[4];
+  uint8_t r_con[num_words][4];  // Round constants
+
+  // Let's compute the round constants!
+  for (int i = 1; i < num_words; i ++) {
+    r_con[i][0] = (i == 1) ? 0 : 1 << (i - 1);
+  }
+
+  // Let's allocate space for this word array!
+  out_words = malloc(num_words * sizeof(uint8_t*));
+  for (int i = 0; i < num_words; i++) {
+    out_words[i] = malloc(4 * sizeof(uint8_t));
+  }
+
+  for (int i = 0; i < n_k; i++) {
+    // Copy words of key to out_words
+    out_words[i][0] = key[4*i];
+    out_words[i][1] = key[4*i+1];
+    out_words[i][2] = key[4*i+2];
+    out_words[i][3] = key[4*i+3];
+  }
+
+  for (int i = n_k; i < num_words; i++) {
+    memcpy(temp, out_words[i-1], n_b * sizeof(uint8_t));
+    if (i % n_k == 0) {
+      rot_word(temp);
+      sub_word(temp);
+      temp[0] = temp[0] ^ r_con[i/n_k][0];
+      temp[1] = temp[1] ^ r_con[i/n_k][1];
+      temp[2] = temp[2] ^ r_con[i/n_k][2];
+      temp[3] = temp[3] ^ r_con[i/n_k][3];
+    }
+    else if (n_k > 6 && (i % n_k) == 4) {
+      sub_word(temp);
+    }
+    out_words[i][0] = out_words[i-n_k][0] ^ temp[0];
+    out_words[i][1] = out_words[i-n_k][1] ^ temp[1];
+    out_words[i][2] = out_words[i-n_k][2] ^ temp[2];
+    out_words[i][3] = out_words[i-n_k][3] ^ temp[3];
+  }
+}
+
 int main(int argc, char **argv) {
   char* keylen_in = NULL;
   int len_opt;
   int keylen;
-  int n_k;        // Key length in bytes
-  int n_r;        // Number of rounds
+  uint8_t n_k;        // Key length in bytes
+  uint8_t n_r;        // Number of rounds
 
   // =======================
   // GET KEY LENGTH AS PARAM
