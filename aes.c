@@ -30,6 +30,8 @@
 
 const uint8_t n_b = 4; // Length of block in 4-byte words
 
+void sub_word(uint8_t* out_word);
+
 /*
 ================================================================================
 DEBUG
@@ -129,24 +131,24 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 ================================================================================
 */
 
-void add_round_key(uint8_t** state, uint8_t** key_schedule, uint8_t rnd) {
+void add_round_key(uint8_t* state, uint8_t** key_schedule, uint8_t rnd) {
   // xor the block state with the round key (block of the expanded key)
   for (int i = 0; i < n_b; i++) {
-    (*state)[i*n_b+0] ^= key_schedule[i+rnd][0];
-    (*state)[i*n_b+1] ^= key_schedule[i+rnd][1];
-    (*state)[i*n_b+2] ^= key_schedule[i+rnd][2];
-    (*state)[i*n_b+3] ^= key_schedule[i+rnd][3];
+    state[i*n_b+0] ^= key_schedule[i+rnd][0];
+    state[i*n_b+1] ^= key_schedule[i+rnd][1];
+    state[i*n_b+2] ^= key_schedule[i+rnd][2];
+    state[i*n_b+3] ^= key_schedule[i+rnd][3];
   }
 }
 
-// void sub_bytes(uint8_t** state) {
-//   for (int i = 0; i < n_b; i++) {
-//     (*state)[i*n_b+0] = s_box[;
-//     (*state)[i*n_b+1] = s_box[;
-//     (*state)[i*n_b+2] = s_box[;
-//     (*state)[i*n_b+3] = s_box[;
-//   }
-// }
+void sub_bytes(uint8_t* state) {
+  for (int i = 0; i < n_b; i++) {
+    state[i*n_b+0] = s_box[state[i*n_b+0]];
+    state[i*n_b+1] = s_box[state[i*n_b+1]];
+    state[i*n_b+2] = s_box[state[i*n_b+2]];
+    state[i*n_b+3] = s_box[state[i*n_b+3]];
+  }
+}
 
 void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t* state;
@@ -157,12 +159,13 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
   debug_print_hex(in, 16);
   debug_print_hex(state, 16);
 
-  add_round_key(&state, key_schedule, 0);
+  add_round_key(state, key_schedule, 0);
 
   debug_print_hex(state, 16);
 
   for (int i = 0; i < n_r; i++) {
-
+    sub_bytes(state);
+    
   }
   // for round = 1 step 1 to Nr–1
   //   SubBytes(state)
