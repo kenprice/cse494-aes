@@ -48,6 +48,16 @@ void debug_print_hex(uint8_t* in, int len) {
   printf("\n");
 }
 
+void debug_print_block(uint8_t* block) {
+  if (!DEBUG) return;
+
+  for (int j = 0; j < n_b; j++) {
+    for (int i = 0; i < 4; i++)
+      printf("%02X", block[n_b*i+j]);
+  }
+  printf("\n");
+}
+
 void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
   if (!DEBUG) return;
 
@@ -102,6 +112,17 @@ uint8_t gmul(uint8_t a, uint8_t b) {
     b >>= 1; /* equivalent to b // 2 */
   }
   return p;
+}
+
+/*
+ * Multiplication of 4 byte words
+ * m(x) = x4+1
+ */
+void coef_mult(uint8_t *a, uint8_t *b, uint8_t *d) {
+  d[0] = gmul(a[0],b[0])^gmul(a[3],b[1])^gmul(a[2],b[2])^gmul(a[1],b[3]);
+  d[1] = gmul(a[1],b[0])^gmul(a[0],b[1])^gmul(a[3],b[2])^gmul(a[2],b[3]);
+  d[2] = gmul(a[2],b[0])^gmul(a[1],b[1])^gmul(a[0],b[2])^gmul(a[3],b[3]);
+  d[3] = gmul(a[3],b[0])^gmul(a[2],b[1])^gmul(a[1],b[2])^gmul(a[0],b[3]);
 }
 
 /*
@@ -173,23 +194,49 @@ void shift_rows(uint8_t* state) {
   state[3+12] = state_temp[3+8];
 }
 
+void mix_columns(uint8_t *state) {
+	uint8_t a[] = {0x02, 0x01, 0x01, 0x03}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+	uint8_t i, j, col[4], res[4];
+
+	for (j = 0; j < n_b; j++) {
+		for (i = 0; i < 4; i++) {
+			col[i] = state[n_b*i+j];
+		}
+
+		coef_mult(a, col, res);
+
+		for (i = 0; i < 4; i++) {
+			state[n_b*i+j] = res[i];
+		}
+	}
+}
+
 void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t* state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
-  debug_print_hex(in, 16);
-  debug_print_hex(state, 16);
+  debug_print_block(in);
+  debug_print_block(state);
 
   add_round_key(state, key_schedule, 0);
 
-  debug_print_hex(state, 16);
+  debug_print_block(state);
 
-  for (int i = 0; i < n_r; i++) {
+  for (int rnd = 0; rnd < n_r; rnd++) {
     sub_bytes(state);
     shift_rows(state);
+    mix_columns(state);
+
+    add_round_key(state, key_schedule, rnd);
   }
+  sub_bytes(state);
+  shift_rows(state);
+  add_round_key(state, key_schedule, n_r);
+
+  printf("CIPHER\n");
+  debug_print_hex(state, 16);
   // for round = 1 step 1 to Nr–1
   //   SubBytes(state)
   //   // See Sec. 5.1.1
@@ -260,7 +307,12 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
   // Let's compute the round constants!
   for (int i = 1; i < num_words; i ++) {
     r_con[i][0] = (i == 1) ? 0 : 1 << (i - 1);
+    r_con[i][1] = 0x00;
+    r_con[i][2] = 0x00;
+    r_con[i][3] = 0x00;
+    printf("%02X ", r_con[i][0]);
   }
+  printf("\n");
 
   // Let's allocate space for this word array!
   out_words = malloc(num_words * sizeof(uint8_t*));
@@ -362,6 +414,13 @@ int main(int argc, char **argv) {
     0x44, 0x55, 0x66, 0x77,
     0x88, 0x99, 0xaa, 0xbb,
     0xcc, 0xdd, 0xee, 0xff};
+
+/*
+  s(0,0) s(0,1) s(0,2) s(0,3)
+  s(1,0) s(1,1) s(1,2) s(1,3)
+  s(2,0) s(2,1) s(2,2) s(2,3)
+  s(3,0) s(3,1) s(3,2) s(3,3)
+*/
 
   uint8_t* out_block;
 
