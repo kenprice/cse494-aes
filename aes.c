@@ -61,10 +61,10 @@ void debug_print_block(uint8_t* block) {
 void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
   if (!DEBUG) return;
 
-  for (int i = 0; i < n_r + 1; i++) {
-    printf("Round %2d\t", i + 1);
-    for (int j = 0; j < n_b; j++) {
-      printf("%02X %02X %02X %02X    ", key_schedule[i+j][0], key_schedule[i+j][1], key_schedule[i+j][3], key_schedule[i+j][4]);
+  for (int i = 0; i < n_r; i++) {
+    printf("Round %2d\t", i);
+    for (int j = i*4; j < n_b + i*4; j++) {
+      printf("%02X %02X %02X %02X    ", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
     }
     printf("\n\n");
   }
@@ -302,17 +302,6 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
   uint8_t** out_words;
   uint8_t num_words = n_b * (n_r + 1);
   uint8_t temp[4];
-  uint8_t r_con[num_words][4];  // Round constants
-
-  // Let's compute the round constants!
-  for (int i = 1; i < num_words; i ++) {
-    r_con[i][0] = (i == 1) ? 0 : 1 << (i - 1);
-    r_con[i][1] = 0x00;
-    r_con[i][2] = 0x00;
-    r_con[i][3] = 0x00;
-    printf("%02X ", r_con[i][0]);
-  }
-  printf("\n");
 
   // Let's allocate space for this word array!
   out_words = malloc(num_words * sizeof(uint8_t*));
@@ -328,15 +317,22 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
     out_words[i][3] = key[4*i+3];
   }
 
+  // while (i < Nb * (Nr+1)]
+  //   temp = w[i-1]
+  //   if (i mod Nk = 0)
+  //     temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
+  //   else if (Nk > 6 and i mod Nk = 4)
+  //     temp = SubWord(temp)
+  //   end if
+  //   w[i] = w[i-Nk] xor temp
+  //   i = i + 1
+  // end while
   for (int i = n_k; i < num_words; i++) {
     memcpy(temp, out_words[i-1], n_b * sizeof(uint8_t));
     if (i % n_k == 0) {
       rot_word(temp);
       sub_word(temp);
-      temp[0] = temp[0] ^ r_con[i/n_k][0];
-      temp[1] = temp[1] ^ r_con[i/n_k][1];
-      temp[2] = temp[2] ^ r_con[i/n_k][2];
-      temp[3] = temp[3] ^ r_con[i/n_k][3];
+      temp[0] = temp[0] ^ r_con[i/n_k];
     }
     else if (n_k > 6 && (i % n_k) == 4) {
       sub_word(temp);
@@ -409,11 +405,19 @@ int main(int argc, char **argv) {
 
   // TODO: Accept user input
   // Input block
+  // uint8_t in_block[] = {
+  //   0x00, 0x11, 0x22, 0x33,
+  //   0x44, 0x55, 0x66, 0x77,
+  //   0x88, 0x99, 0xaa, 0xbb,
+  //   0xcc, 0xdd, 0xee, 0xff};
+
+//00112233445566778899aabbccddeeff
   uint8_t in_block[] = {
-    0x00, 0x11, 0x22, 0x33,
-    0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xaa, 0xbb,
-    0xcc, 0xdd, 0xee, 0xff};
+    0x00, 0x44, 0x88, 0xcc,
+    0x11, 0x55, 0x99, 0xdd,
+    0x22, 0x66, 0xaa, 0xee,
+    0x33, 0x77, 0xbb, 0xff
+  };
 
 /*
   s(0,0) s(0,1) s(0,2) s(0,3)
@@ -426,11 +430,24 @@ int main(int argc, char **argv) {
 
   // TEST TEST TEST TEST TEST //
   uint8_t** key_schedule;
+  // uint8_t test_key[] = {
+  //   0x00, 0x00, 0x00, 0x00,
+  //   0x00, 0x00, 0x00, 0x00,
+  //   0x00, 0x00, 0x00, 0x00,
+  //   0x00, 0x00, 0x00, 0x00};
+  //
+  // uint8_t test_key[] = {
+  //   0x00, 0x04, 0x08, 0x0c,
+  //   0x01, 0x05, 0x09, 0x0d,
+  //   0x02, 0x06, 0x0a, 0x0e,
+  //   0x03, 0x07, 0x0b, 0x0f
+  // };
   uint8_t test_key[] = {
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00};
+    0x00, 0x01, 0x02, 0x03,
+    0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b,
+    0x0c, 0x0d, 0x0e, 0x0f
+  };
   key_schedule = key_expansion(test_key, 4, 10);
   debug_print_key_expansion(key_schedule, n_r);
   // TEST TEST TEST TEST TEST //
