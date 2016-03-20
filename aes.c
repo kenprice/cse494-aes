@@ -53,7 +53,8 @@ void debug_print_block(uint8_t* block) {
 
   for (int j = 0; j < n_b; j++) {
     for (int i = 0; i < 4; i++)
-      printf("%02X", block[n_b*i+j]);
+      printf("%02X", block[n_b*j+i]);
+    printf(" ");
   }
   printf("\n");
 }
@@ -154,12 +155,16 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 
 void add_round_key(uint8_t* state, uint8_t** key_schedule, uint8_t rnd) {
   // xor the block state with the round key (block of the expanded key)
+
+  printf("Key:\t");
   for (int i = 0; i < n_b; i++) {
-    state[i*n_b+0] ^= key_schedule[i+rnd][0];
-    state[i*n_b+1] ^= key_schedule[i+rnd][1];
-    state[i*n_b+2] ^= key_schedule[i+rnd][2];
-    state[i*n_b+3] ^= key_schedule[i+rnd][3];
+    printf("%02X%02X%02X%02X ", key_schedule[rnd*4+i][0], key_schedule[rnd*4+i][1], key_schedule[rnd*4+i][2], key_schedule[rnd*4+i][3]);
+    state[i*n_b+0] ^= key_schedule[rnd*4+i][0];
+    state[i*n_b+1] ^= key_schedule[rnd*4+i][1];
+    state[i*n_b+2] ^= key_schedule[rnd*4+i][2];
+    state[i*n_b+3] ^= key_schedule[rnd*4+i][3];
   }
+  printf("\n");
 }
 
 void sub_bytes(uint8_t* state) {
@@ -200,13 +205,13 @@ void mix_columns(uint8_t *state) {
 
 	for (j = 0; j < n_b; j++) {
 		for (i = 0; i < 4; i++) {
-			col[i] = state[n_b*i+j];
+			col[i] = state[n_b*j+i];
 		}
 
 		coef_mult(a, col, res);
 
 		for (i = 0; i < 4; i++) {
-			state[n_b*i+j] = res[i];
+			state[n_b*j+i] = res[i];
 		}
 	}
 }
@@ -217,6 +222,27 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
+  // Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+  //   begin
+  //     byte  state[4,Nb]
+  //     state = in
+  //     AddRoundKey(state, w[0, Nb-1])
+  //     // See Sec. 5.1.4
+  //     for round = 1 step 1 to Nr–1
+  //       SubBytes(state)
+  //       // See Sec. 5.1.1
+  //       ShiftRows(state)
+  //       // See Sec. 5.1.2
+  //       MixColumns(state)
+  //       // See Sec. 5.1.3
+  //       AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+  //     end for
+  //     SubBytes(state)
+  //     ShiftRows(state)
+  //     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
+  //     out = state
+  //   end
+
   debug_print_block(in);
   debug_print_block(state);
 
@@ -224,19 +250,33 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
 
   debug_print_block(state);
 
-  for (int rnd = 0; rnd < n_r; rnd++) {
+  for (int rnd = 1; rnd < n_r; rnd++) {
+    printf("Round %2d\n", rnd);
+
+    printf("Start:\t");
+    debug_print_block(state);
+
     sub_bytes(state);
+    printf("Sub:\t");
+    debug_print_block(state);
+
     shift_rows(state);
+    printf("Shft:\t");
+    debug_print_block(state);
+
     mix_columns(state);
+    printf("Mcol:\t");
+    debug_print_block(state);
 
     add_round_key(state, key_schedule, rnd);
+    printf("\n");
   }
   sub_bytes(state);
   shift_rows(state);
   add_round_key(state, key_schedule, n_r);
 
   printf("CIPHER\n");
-  debug_print_hex(state, 16);
+  debug_print_block(state);
   // for round = 1 step 1 to Nr–1
   //   SubBytes(state)
   //   // See Sec. 5.1.1
@@ -405,19 +445,20 @@ int main(int argc, char **argv) {
 
   // TODO: Accept user input
   // Input block
-  // uint8_t in_block[] = {
-  //   0x00, 0x11, 0x22, 0x33,
-  //   0x44, 0x55, 0x66, 0x77,
-  //   0x88, 0x99, 0xaa, 0xbb,
-  //   0xcc, 0xdd, 0xee, 0xff};
+  //00112233445566778899aabbccddeeff
 
-//00112233445566778899aabbccddeeff
   uint8_t in_block[] = {
-    0x00, 0x44, 0x88, 0xcc,
-    0x11, 0x55, 0x99, 0xdd,
-    0x22, 0x66, 0xaa, 0xee,
-    0x33, 0x77, 0xbb, 0xff
-  };
+    0x00, 0x11, 0x22, 0x33,
+    0x44, 0x55, 0x66, 0x77,
+    0x88, 0x99, 0xaa, 0xbb,
+    0xcc, 0xdd, 0xee, 0xff};
+
+  // uint8_t in_block[] = {
+  //   0x00, 0x44, 0x88, 0xcc,
+  //   0x11, 0x55, 0x99, 0xdd,
+  //   0x22, 0x66, 0xaa, 0xee,
+  //   0x33, 0x77, 0xbb, 0xff
+  // };
 
 /*
   s(0,0) s(0,1) s(0,2) s(0,3)
@@ -435,19 +476,20 @@ int main(int argc, char **argv) {
   //   0x00, 0x00, 0x00, 0x00,
   //   0x00, 0x00, 0x00, 0x00,
   //   0x00, 0x00, 0x00, 0x00};
-  //
-  // uint8_t test_key[] = {
-  //   0x00, 0x04, 0x08, 0x0c,
-  //   0x01, 0x05, 0x09, 0x0d,
-  //   0x02, 0x06, 0x0a, 0x0e,
-  //   0x03, 0x07, 0x0b, 0x0f
-  // };
+
   uint8_t test_key[] = {
     0x00, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b,
     0x0c, 0x0d, 0x0e, 0x0f
   };
+  // uint8_t test_key[] = {
+  //   0x00, 0x04, 0x08, 0x0c,
+  //   0x01, 0x05, 0x09, 0x0d,
+  //   0x02, 0x06, 0x0a, 0x0e,
+  //   0x03, 0x07, 0x0b, 0x0f
+  // };
+
   key_schedule = key_expansion(test_key, 4, 10);
   debug_print_key_expansion(key_schedule, n_r);
   // TEST TEST TEST TEST TEST //
