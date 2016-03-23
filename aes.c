@@ -15,6 +15,7 @@
 //     AddRoundKey.
 
 #include "aes.h"
+#include "gf.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <getopt.h>
@@ -52,7 +53,7 @@ void debug_print_block(uint8_t* block, char* label) {
   if (!DEBUG) return;
 
   if (label) {
-    printf("%s\n", label);
+    printf("%s", label);
   }
   for (int j = 0; j < n_b; j++) {
     for (int i = 0; i < 4; i++)
@@ -72,61 +73,6 @@ void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
     }
     printf("\n\n");
   }
-}
-
-/*
-================================================================================
-MATH OPS
-================================================================================
-*/
-
-/*
- * Addition in GF(2^8)
- * http://en.wikipedia.org/wiki/Finite_field_arithmetic
- */
-uint8_t gadd(uint8_t a, uint8_t b) {
-  return a^b;
-}
-
-/*
- * Subtraction in GF(2^8)
- * http://en.wikipedia.org/wiki/Finite_field_arithmetic
- */
-uint8_t gsub(uint8_t a, uint8_t b) {
-  return a^b;
-}
-
-/* From Wikipedia
- *
- * Multiply two numbers in the GF(2^8) finite field defined
- * by the polynomial x^8 + x^4 + x^3 + x + 1 = 0
- * using the Russian Peasant Multiplication algorithm
- * (the other way being to do carry-less multiplication followed by a modular reduction)
- */
-uint8_t gmul(uint8_t a, uint8_t b) {
-  uint8_t p = 0; /* the product of the multiplication */
-  while (b) {
-    if (b & 1) /* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
-      p ^= a; /* since we're in GF(2^m), addition is an XOR */
-
-    if (a & 0x80) /* GF modulo: if a >= 128, then it will overflow when shifted left, so reduce */
-      a = (a << 1) ^ 0x11b; /* XOR with the primitive polynomial x^8 + x^4 + x^3 + x + 1 -- you can change it but it must be irreducible */
-    else
-      a <<= 1; /* equivalent to a*2 */
-    b >>= 1; /* equivalent to b // 2 */
-  }
-  return p;
-}
-
-/*
- * Multiplication of 4 byte words
- * m(x) = x4+1
- */
-void coef_mult(uint8_t *a, uint8_t *b, uint8_t *d) {
-  d[0] = gmul(a[0],b[0])^gmul(a[3],b[1])^gmul(a[2],b[2])^gmul(a[1],b[3]);
-  d[1] = gmul(a[1],b[0])^gmul(a[0],b[1])^gmul(a[3],b[2])^gmul(a[2],b[3]);
-  d[2] = gmul(a[2],b[0])^gmul(a[1],b[1])^gmul(a[0],b[2])^gmul(a[3],b[3]);
-  d[3] = gmul(a[3],b[0])^gmul(a[2],b[1])^gmul(a[1],b[2])^gmul(a[0],b[3]);
 }
 
 /*
@@ -242,15 +188,12 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
-  debug_print_block(in, NULL);
-  debug_print_block(state, NULL);
-
   add_round_key(state, key_schedule, 0);
 
-  debug_print_block(state, NULL);
-
   for (int rnd = 1; rnd < n_r; rnd++) {
-    debug_print_block(state, "Round %2d\nStart:\t");
+    if (DEBUG) printf("\nRound %2d\n", rnd);
+
+    debug_print_block(state, "Start:\t");
 
     sub_bytes(state);
     debug_print_block(state, "Sub:\t");
@@ -368,6 +311,23 @@ int main(int argc, char **argv) {
   char* key_string = NULL;
   int opt, l_flag = 0, k_flag = 0, i_flag = 0;
 
+  uint8_t in_block[] = {
+    0x00, 0x11, 0x22, 0x33,
+    0x44, 0x55, 0x66, 0x77,
+    0x88, 0x99, 0xaa, 0xbb,
+    0xcc, 0xdd, 0xee, 0xff};
+
+  uint8_t* out_block;
+
+  uint8_t** key_schedule;
+
+  uint8_t test_key[] = {
+    0x00, 0x01, 0x02, 0x03,
+    0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b,
+    0x0c, 0x0d, 0x0e, 0x0f
+  };
+
   // =======================
   // GET KEY LENGTH AS PARAM
   // =======================
@@ -415,52 +375,7 @@ int main(int argc, char **argv) {
   // Input block
   //00112233445566778899aabbccddeeff
 
-  uint8_t in_block[] = {
-    0x00, 0x11, 0x22, 0x33,
-    0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xaa, 0xbb,
-    0xcc, 0xdd, 0xee, 0xff};
-
-  // uint8_t in_block[] = {
-  //   0x00, 0x44, 0x88, 0xcc,
-  //   0x11, 0x55, 0x99, 0xdd,
-  //   0x22, 0x66, 0xaa, 0xee,
-  //   0x33, 0x77, 0xbb, 0xff
-  // };
-
-/*
-  s(0,0) s(0,1) s(0,2) s(0,3)
-  s(1,0) s(1,1) s(1,2) s(1,3)
-  s(2,0) s(2,1) s(2,2) s(2,3)
-  s(3,0) s(3,1) s(3,2) s(3,3)
-*/
-
-  uint8_t* out_block;
-
-  // TEST TEST TEST TEST TEST //
-  uint8_t** key_schedule;
-  // uint8_t test_key[] = {
-  //   0x00, 0x00, 0x00, 0x00,
-  //   0x00, 0x00, 0x00, 0x00,
-  //   0x00, 0x00, 0x00, 0x00,
-  //   0x00, 0x00, 0x00, 0x00};
-
-  uint8_t test_key[] = {
-    0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b,
-    0x0c, 0x0d, 0x0e, 0x0f
-  };
-  // uint8_t test_key[] = {
-  //   0x00, 0x04, 0x08, 0x0c,
-  //   0x01, 0x05, 0x09, 0x0d,
-  //   0x02, 0x06, 0x0a, 0x0e,
-  //   0x03, 0x07, 0x0b, 0x0f
-  // };
-
   key_schedule = key_expansion(test_key, 4, 10);
-  debug_print_key_expansion(key_schedule, n_r);
-  // TEST TEST TEST TEST TEST //
 
   cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
 }
