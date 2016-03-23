@@ -154,20 +154,20 @@ void shift_rows(uint8_t *state) {
 }
 
 void mix_columns(uint8_t *state) {
-	uint8_t a[] = {0x02, 0x01, 0x01, 0x03}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
-	uint8_t i, j, col[4], res[4];
+  uint8_t a[] = {0x02, 0x01, 0x01, 0x03}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+  uint8_t i, j, col[4], res[4];
 
-	for (j = 0; j < n_b; j++) {
-		for (i = 0; i < 4; i++) {
-			col[i] = state[n_b*j+i];
-		}
+  for (j = 0; j < n_b; j++) {
+    for (i = 0; i < 4; i++) {
+      col[i] = state[n_b*j+i];
+    }
 
-		coef_mult(a, col, res);
+    coef_mult(a, col, res);
 
-		for (i = 0; i < 4; i++) {
-			state[n_b*j+i] = res[i];
-		}
-	}
+    for (i = 0; i < 4; i++) {
+      state[n_b*j+i] = res[i];
+    }
+  }
 }
 
 // Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
