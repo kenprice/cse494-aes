@@ -31,7 +31,7 @@
 
 const uint8_t n_b = 4; // Length of block in 4-byte words
 
-void sub_word(uint8_t* out_word);
+void sub_word(uint8_t *out_word);
 
 /*
 ================================================================================
@@ -39,7 +39,7 @@ DEBUG
 ================================================================================
 */
 
-void debug_print_hex(uint8_t* in, int len) {
+void debug_print_hex(uint8_t *in, int len) {
   if (!DEBUG) return;
 
   for (int i = 0; i < len; i++) {
@@ -49,7 +49,7 @@ void debug_print_hex(uint8_t* in, int len) {
   printf("\n");
 }
 
-void debug_print_block(uint8_t* block, char* label) {
+void debug_print_block(uint8_t *block, char *label) {
   if (!DEBUG) return;
 
   if (label) {
@@ -63,7 +63,7 @@ void debug_print_block(uint8_t* block, char* label) {
   printf("\n");
 }
 
-void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
+void debug_print_key_expansion(uint8_t **key_schedule, int n_r) {
   if (!DEBUG) return;
 
   for (int i = 0; i < n_r; i++) {
@@ -75,7 +75,7 @@ void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
   }
 }
 
-void debug_print_key_schedule(uint8_t** key_schedule, int rnd) {
+void debug_print_key_schedule(uint8_t **key_schedule, int rnd) {
   if (!DEBUG) return;
 
   printf("  Kschd: ");
@@ -111,7 +111,7 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 ================================================================================
 */
 
-void add_round_key(uint8_t* state, uint8_t** key_schedule, uint8_t rnd) {
+void add_round_key(uint8_t *state, uint8_t **key_schedule, uint8_t rnd) {
   // xor the block state with the round key (block of the expanded key)
   for (int i = 0; i < n_b; i++) {
     state[i*n_b+0] ^= key_schedule[rnd*4+i][0];
@@ -121,7 +121,7 @@ void add_round_key(uint8_t* state, uint8_t** key_schedule, uint8_t rnd) {
   }
 }
 
-void sub_bytes(uint8_t* state) {
+void sub_bytes(uint8_t *state) {
   for (int i = 0; i < n_b; i++) {
     state[i*n_b+0] = s_box[state[i*n_b+0]];
     state[i*n_b+1] = s_box[state[i*n_b+1]];
@@ -130,7 +130,7 @@ void sub_bytes(uint8_t* state) {
   }
 }
 
-void shift_rows(uint8_t* state) {
+void shift_rows(uint8_t *state) {
   uint8_t state_temp[BLOCK_LENGTH_IN_BYTES];
   memcpy(state_temp, state, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
@@ -191,8 +191,8 @@ void mix_columns(uint8_t *state) {
 //     out = state
 //   end
 
-void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
-  uint8_t* state;
+void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+  uint8_t *state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
@@ -258,14 +258,14 @@ KeyExpansion(byte key[4*Nk], word w[Nb*(Nr+1)], Nk)
   end
 ===================================================================
 */
-void sub_word(uint8_t* out_word) {
+void sub_word(uint8_t *out_word) {
   // Input: 4-byte word
   // Output: 4-byte word with substitution using S-box
   for (int i = 0; i < 4; i++)
     out_word[i] = s_box[out_word[i]];
 }
 
-void rot_word(uint8_t* out_word) {
+void rot_word(uint8_t *out_word) {
   // Input: 4-byte word
   // Output: Same 4-byte word, but rotated to the left cyclically
   //   e.g. [a0, a1, a2, a3] => [a1, a2, a3, a0]
@@ -276,10 +276,10 @@ void rot_word(uint8_t* out_word) {
   out_word[3] = aux;
 }
 
-uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
+uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
   // Input: key
   // Output: Nb * (Nr + 1) array of words (key schedule)
-  uint8_t** out_words;
+  uint8_t **out_words;
   uint8_t num_words = n_b * (n_r + 1);
   uint8_t temp[4];
 
@@ -323,15 +323,13 @@ UTILS
 ================================================================================
 */
 
-uint8_t* hex_string_to_bytes(char* hex_string) {
-  const char* pos = hex_string;
-  uint8_t* val;
-  size_t count = 0;
-  size_t max = strlen(hex_string)/2;
+uint8_t *hex_string_to_bytes(char *hex_string) {
+  const char *pos = hex_string;
+  uint8_t *val;
+  size_t count = 0, max = strlen(hex_string)/2;
 
   val = malloc(strlen(hex_string)/2 * sizeof(uint8_t));
 
-   /* WARNING: no sanitization or error-checking whatsoever */
   for(count = 0; count < max; count++) {
     sscanf(pos, "%2hhx", &val[count]);
     pos += 2;
@@ -352,14 +350,12 @@ MAIN
 */
 
 int main(int argc, char **argv) {
-  int keylen;
-  uint8_t* key = NULL;
   int opt, k_flag = 0, p_flag = 0;
+  uint8_t *in_block = NULL, *out_block = NULL, *key = NULL;
+  int keylen;                            // Key length in bits
   uint8_t n_k;                           // Key length in bytes
   uint8_t n_r;                           // Number of rounds
-  uint8_t** key_schedule;
-  uint8_t* in_block;
-  uint8_t* out_block;
+  uint8_t **key_schedule;
 
   // =======================
   // GET KEY LENGTH AS PARAM
@@ -374,8 +370,10 @@ int main(int argc, char **argv) {
         if (!strlen(optarg) == 128 && !strlen(optarg) == 192 && !strlen(optarg) == 256)
           exit_with_usage_message();
 
-        keylen = strlen(optarg);
+        keylen = strlen(optarg)/2*8;
         key = hex_string_to_bytes(optarg);
+
+        if (DEBUG) printf(" KeyLen: %d\n", keylen);
         debug_print_block(key, "  InKey: ");
         k_flag = 1;
         break;
