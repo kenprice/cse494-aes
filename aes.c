@@ -198,7 +198,7 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
   if (DEBUG) {
-    printf("Round 0\n");
+    printf("\nRound 0\n");
     debug_print_block(state, "  Start: ");
   }
 
@@ -316,6 +316,35 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
   return out_words;
 }
 
+
+/*
+================================================================================
+UTILS
+================================================================================
+*/
+
+uint8_t* hex_string_to_bytes(char* hex_string) {
+  const char* pos = hex_string;
+  uint8_t* val;
+  size_t count = 0;
+  size_t max = strlen(hex_string)/2;
+
+  val = malloc(strlen(hex_string)/2 * sizeof(uint8_t));
+
+   /* WARNING: no sanitization or error-checking whatsoever */
+  for(count = 0; count < max; count++) {
+    sscanf(pos, "%2hhx", &val[count]);
+    pos += 2;
+  }
+
+  return(val);
+}
+
+void exit_with_usage_message() {
+  printf (USAGE_MESSAGE);
+  exit(0);
+}
+
 /*
 ================================================================================
 MAIN
@@ -326,49 +355,47 @@ int main(int argc, char **argv) {
   uint8_t n_k;                           // Key length in bytes
   uint8_t n_r;                           // Number of rounds
   int keylen;
-  char* keylen_in = NULL;                // User input from options
-  char* key_string = NULL;
-  int opt, l_flag = 0, k_flag = 0, i_flag = 0;
-
-  uint8_t in_block[] = {
-    0x00, 0x11, 0x22, 0x33,
-    0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xaa, 0xbb,
-    0xcc, 0xdd, 0xee, 0xff};
+  uint8_t* key = NULL;
+  int opt, l_flag = 0, k_flag = 0, p_flag = 0;
 
   uint8_t* out_block;
-
   uint8_t** key_schedule;
-
-  uint8_t test_key[] = {
-    0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b,
-    0x0c, 0x0d, 0x0e, 0x0f
-  };
 
   // =======================
   // GET KEY LENGTH AS PARAM
   // =======================
 
-  while ((opt = getopt (argc, argv, "l:k:")) != -1) {
+  if (DEBUG) printf("INPUT\n");
+
+  while ((opt = getopt (argc, argv, "l:k:p:")) != -1) {
     switch (opt) {
       case 'l':
         // User option to specify key length
-        keylen_in = optarg;
-        if (strcmp(keylen_in, "128") == 0 || strcmp(keylen_in, "192") == 0 || strcmp(keylen_in, "256") == 0) {
-          keylen = atoi(keylen_in);
-        } else {
-          printf (USAGE_MESSAGE);
-          exit(0);
-        }
+        if (!strcmp(optarg, "128") == 0 && !strcmp(optarg, "192") == 0 && !strcmp(optarg, "256") == 0)
+          exit_with_usage_message();
+
+        keylen = atoi(optarg);
+        if (DEBUG)
+          printf(" KeyLen: %d\n", keylen);
         l_flag = 1;
         break;
 
       case 'k':
         // User option to specify key as hex string
-        key_string = optarg;
+        if (!strlen(optarg) == 128 && !strlen(optarg) == 192 && !strlen(optarg) == 256)
+          exit_with_usage_message();
+
+        key = hex_string_to_bytes(optarg);
+        debug_print_block(key, "  InKey: ");
         k_flag = 1;
+        break;
+
+      case 'p': // Input block (plaintext)
+        if (!strlen(optarg) == 128)
+          exit_with_usage_message();
+
+        in_block = hex_string_to_bytes(optarg);
+        p_flag = 1;
         break;
 
       default:
@@ -390,11 +417,7 @@ int main(int argc, char **argv) {
       break;
   }
 
-  // TODO: Accept user input
-  // Input block
-  //00112233445566778899aabbccddeeff
-
-  key_schedule = key_expansion(test_key, 4, 10);
+  key_schedule = key_expansion(key, 4, 10);
 
   cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
 }
