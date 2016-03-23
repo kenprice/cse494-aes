@@ -75,6 +75,15 @@ void debug_print_key_expansion(uint8_t** key_schedule, int n_r) {
   }
 }
 
+void debug_print_key_schedule(uint8_t** key_schedule, int rnd) {
+  if (!DEBUG) return;
+
+  printf("  Kschd: ");
+  for (int j = rnd*4; j < n_b + rnd*4; j++) {
+    printf("%02X%02X%02X%02X ", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+  }
+}
+
 /*
 ================================================================================
 CIPHER
@@ -188,29 +197,39 @@ void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
+  if (DEBUG) {
+    printf("Round 0\n");
+    debug_print_block(state, "  Start: ");
+  }
+
   add_round_key(state, key_schedule, 0);
+  if (DEBUG) {
+    debug_print_key_schedule(key_schedule, 0);
+  }
 
   for (int rnd = 1; rnd < n_r; rnd++) {
-    if (DEBUG) printf("\nRound %2d\n", rnd);
+    if (DEBUG) printf("\n\nRound %2d\n", rnd);
 
-    debug_print_block(state, "Start:\t");
+    debug_print_block(state, "  Start: ");
 
     sub_bytes(state);
-    debug_print_block(state, "Sub:\t");
+    debug_print_block(state, "  Subst: ");
 
     shift_rows(state);
-    debug_print_block(state, "Shft:\t");
+    debug_print_block(state, "  Shift: ");
 
     mix_columns(state);
-    debug_print_block(state, "Mcol:\t");
+    debug_print_block(state, "  Mxcol: ");
 
     add_round_key(state, key_schedule, rnd);
+    debug_print_key_schedule(key_schedule, rnd);
+
   }
   sub_bytes(state);
   shift_rows(state);
   add_round_key(state, key_schedule, n_r);
 
-  debug_print_block(state, "\nCIPHER\n");
+  debug_print_block(state, "\n\nCIPHER\n");
 }
 
 /*
