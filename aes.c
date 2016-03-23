@@ -225,10 +225,19 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint
     debug_print_key_schedule(key_schedule, rnd);
 
   }
+
+  if (DEBUG) printf("\n\nRound 10\n");
+  debug_print_block(state, "  Start: ");
+
   sub_bytes(state);
+  debug_print_block(state, "  Subst: ");
+
   shift_rows(state);
+  debug_print_block(state, "  Shift: ");
+
   add_round_key(state, key_schedule, n_r);
 
+  debug_print_key_schedule(key_schedule, 10);
   debug_print_block(state, "\n\nCIPHER\n");
 }
 
