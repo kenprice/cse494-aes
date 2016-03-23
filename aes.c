@@ -352,14 +352,14 @@ MAIN
 */
 
 int main(int argc, char **argv) {
-  uint8_t n_k;                           // Key length in bytes
-  uint8_t n_r;                           // Number of rounds
   int keylen;
   uint8_t* key = NULL;
-  int opt, l_flag = 0, k_flag = 0, p_flag = 0;
-
-  uint8_t* out_block;
+  int opt, k_flag = 0, p_flag = 0;
+  uint8_t n_k;                           // Key length in bytes
+  uint8_t n_r;                           // Number of rounds
   uint8_t** key_schedule;
+  uint8_t* in_block;
+  uint8_t* out_block;
 
   // =======================
   // GET KEY LENGTH AS PARAM
@@ -367,24 +367,14 @@ int main(int argc, char **argv) {
 
   if (DEBUG) printf("INPUT\n");
 
-  while ((opt = getopt (argc, argv, "l:k:p:")) != -1) {
+  while ((opt = getopt (argc, argv, "k:p:")) != -1) {
     switch (opt) {
-      case 'l':
-        // User option to specify key length
-        if (!strcmp(optarg, "128") == 0 && !strcmp(optarg, "192") == 0 && !strcmp(optarg, "256") == 0)
-          exit_with_usage_message();
-
-        keylen = atoi(optarg);
-        if (DEBUG)
-          printf(" KeyLen: %d\n", keylen);
-        l_flag = 1;
-        break;
-
       case 'k':
         // User option to specify key as hex string
         if (!strlen(optarg) == 128 && !strlen(optarg) == 192 && !strlen(optarg) == 256)
           exit_with_usage_message();
 
+        keylen = strlen(optarg);
         key = hex_string_to_bytes(optarg);
         debug_print_block(key, "  InKey: ");
         k_flag = 1;
@@ -403,6 +393,9 @@ int main(int argc, char **argv) {
         exit(0);
     }
   }
+
+  if (!k_flag || !p_flag)
+    exit_with_usage_message();
 
   // Compute number of rounds and keylen in bytes
   switch (keylen) {
