@@ -23,7 +23,7 @@
 #include <string.h>
 
 #define DEBUG 1
-#define USAGE_MESSAGE "Usage: aes -l {128, 192, 256}\nThe argument for -l is the key length in bits.\n\n"
+#define USAGE_MESSAGE "Usage: aes -k <key> -p <plaintext>\n\tkey - 128-bit, 192-bit, or 256-bit as hex string\n\tplaintext - 128-bit plaintext as hex string\n\n"
 
 // AES-specific constants
 #define BLOCK_LENGTH_IN_BYTES 16
@@ -364,13 +364,14 @@ int main(int argc, char **argv) {
   if (DEBUG) printf("INPUT\n");
 
   while ((opt = getopt (argc, argv, "k:p:")) != -1) {
+    int len_bits = strlen(optarg) / 2 * 8;      // Length of hex string -> length of bits
     switch (opt) {
       case 'k':
         // User option to specify key as hex string
-        if (!strlen(optarg) == 128 && !strlen(optarg) == 192 && !strlen(optarg) == 256)
+        if (!(len_bits == 128 || len_bits == 192 || len_bits == 256))
           exit_with_usage_message();
 
-        keylen = strlen(optarg)/2*8;
+        keylen = len_bits;
         key = hex_string_to_bytes(optarg);
 
         if (DEBUG) printf(" KeyLen: %d\n", keylen);
@@ -379,7 +380,7 @@ int main(int argc, char **argv) {
         break;
 
       case 'p': // Input block (plaintext)
-        if (!strlen(optarg) == 128)
+        if (len_bits != 128)
           exit_with_usage_message();
 
         in_block = hex_string_to_bytes(optarg);
