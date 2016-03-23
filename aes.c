@@ -48,9 +48,12 @@ void debug_print_hex(uint8_t* in, int len) {
   printf("\n");
 }
 
-void debug_print_block(uint8_t* block) {
+void debug_print_block(uint8_t* block, char* label) {
   if (!DEBUG) return;
 
+  if (label) {
+    printf("%s\n", label);
+  }
   for (int j = 0; j < n_b; j++) {
     for (int i = 0; i < 4; i++)
       printf("%02X", block[n_b*j+i]);
@@ -155,16 +158,12 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 
 void add_round_key(uint8_t* state, uint8_t** key_schedule, uint8_t rnd) {
   // xor the block state with the round key (block of the expanded key)
-
-  printf("Key:\t");
   for (int i = 0; i < n_b; i++) {
-    printf("%02X%02X%02X%02X ", key_schedule[rnd*4+i][0], key_schedule[rnd*4+i][1], key_schedule[rnd*4+i][2], key_schedule[rnd*4+i][3]);
     state[i*n_b+0] ^= key_schedule[rnd*4+i][0];
     state[i*n_b+1] ^= key_schedule[rnd*4+i][1];
     state[i*n_b+2] ^= key_schedule[rnd*4+i][2];
     state[i*n_b+3] ^= key_schedule[rnd*4+i][3];
   }
-  printf("\n");
 }
 
 void sub_bytes(uint8_t* state) {
@@ -216,80 +215,59 @@ void mix_columns(uint8_t *state) {
 	}
 }
 
+// Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+//   begin
+//     byte  state[4,Nb]
+//     state = in
+//     AddRoundKey(state, w[0, Nb-1])
+//     // See Sec. 5.1.4
+//     for round = 1 step 1 to Nr–1
+//       SubBytes(state)
+//       // See Sec. 5.1.1
+//       ShiftRows(state)
+//       // See Sec. 5.1.2
+//       MixColumns(state)
+//       // See Sec. 5.1.3
+//       AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+//     end for
+//     SubBytes(state)
+//     ShiftRows(state)
+//     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
+//     out = state
+//   end
+
 void cipher(uint8_t* out, uint8_t* in, uint8_t** key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t* state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
-  // Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
-  //   begin
-  //     byte  state[4,Nb]
-  //     state = in
-  //     AddRoundKey(state, w[0, Nb-1])
-  //     // See Sec. 5.1.4
-  //     for round = 1 step 1 to Nr–1
-  //       SubBytes(state)
-  //       // See Sec. 5.1.1
-  //       ShiftRows(state)
-  //       // See Sec. 5.1.2
-  //       MixColumns(state)
-  //       // See Sec. 5.1.3
-  //       AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
-  //     end for
-  //     SubBytes(state)
-  //     ShiftRows(state)
-  //     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
-  //     out = state
-  //   end
-
-  debug_print_block(in);
-  debug_print_block(state);
+  debug_print_block(in, NULL);
+  debug_print_block(state, NULL);
 
   add_round_key(state, key_schedule, 0);
 
-  debug_print_block(state);
+  debug_print_block(state, NULL);
 
   for (int rnd = 1; rnd < n_r; rnd++) {
-    printf("Round %2d\n", rnd);
-
-    printf("Start:\t");
-    debug_print_block(state);
+    debug_print_block(state, "Round %2d\nStart:\t");
 
     sub_bytes(state);
-    printf("Sub:\t");
-    debug_print_block(state);
+    debug_print_block(state, "Sub:\t");
 
     shift_rows(state);
-    printf("Shft:\t");
-    debug_print_block(state);
+    debug_print_block(state, "Shft:\t");
 
     mix_columns(state);
-    printf("Mcol:\t");
-    debug_print_block(state);
+    debug_print_block(state, "Mcol:\t");
 
     add_round_key(state, key_schedule, rnd);
-    printf("\n");
   }
   sub_bytes(state);
   shift_rows(state);
   add_round_key(state, key_schedule, n_r);
 
-  printf("CIPHER\n");
-  debug_print_block(state);
-  // for round = 1 step 1 to Nr–1
-  //   SubBytes(state)
-  //   // See Sec. 5.1.1
-  //   ShiftRows(state)
-  //   // See Sec. 5.1.2
-  //   MixColumns(state)
-  //   // See Sec. 5.1.3
-  //   AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
-  // end for
-  // SubBytes(state)
-  // ShiftRows(state)
-  // AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
-  // out = state
+  debug_print_block(state, "\nCIPHER\n");
 }
 
 /*
@@ -357,16 +335,6 @@ uint8_t** key_expansion(uint8_t* key, uint8_t n_k, uint8_t n_r) {
     out_words[i][3] = key[4*i+3];
   }
 
-  // while (i < Nb * (Nr+1)]
-  //   temp = w[i-1]
-  //   if (i mod Nk = 0)
-  //     temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
-  //   else if (Nk > 6 and i mod Nk = 4)
-  //     temp = SubWord(temp)
-  //   end if
-  //   w[i] = w[i-Nk] xor temp
-  //   i = i + 1
-  // end while
   for (int i = n_k; i < num_words; i++) {
     memcpy(temp, out_words[i-1], n_b * sizeof(uint8_t));
     if (i % n_k == 0) {
