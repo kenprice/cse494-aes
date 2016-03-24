@@ -23,7 +23,7 @@
 #include <string.h>
 
 #define DEBUG 1
-#define USAGE_MESSAGE "Usage: aes -k <key> -p <plaintext>\n\tkey - 128-bit, 192-bit, or 256-bit as hex string\n\tplaintext - 128-bit plaintext as hex string\n\n"
+#define USAGE_MESSAGE "Usage: aes (-d) -k <key> -i <plaintext/ciphertext>\n\tkey - 128-bit, 192-bit, or 256-bit as hex string\n\tplaintext - 128-bit plaintext as hex string\nOption -d for decrypt. Encrypt by default.\n\n"
 
 // AES-specific constants
 #define BLOCK_LENGTH_IN_BYTES 16
@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
 
   if (DEBUG) printf("INPUT\n");
 
-  while ((opt = getopt (argc, argv, "dk:p:")) != -1) {
+  while ((opt = getopt (argc, argv, "dk:i:")) != -1) {
     int len_bits = 0;      // Length of hex string -> length of bits
     switch (opt) {
       case 'd':
@@ -518,7 +518,7 @@ int main(int argc, char **argv) {
         k_flag = 1;
         break;
 
-      case 'p': // Input block (plaintext)
+      case 'i': // Input block (plaintext or ciphertext)
         len_bits = strlen(optarg) / 2 * 8;
         if (len_bits != 128)
           exit_with_usage_message();
