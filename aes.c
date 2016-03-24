@@ -146,7 +146,7 @@ void shift_rows(uint8_t *state) {
   state[2+8]  = state_temp[2+0];
   state[2+12] = state_temp[2+4];
 
-  // Row 3, shift left once
+  // Row 3, shift left three times
   state[3+0]  = state_temp[3+12];
   state[3+4]  = state_temp[3+0];
   state[3+8]  = state_temp[3+4];
@@ -169,27 +169,6 @@ void mix_columns(uint8_t *state) {
     }
   }
 }
-
-// Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
-//   begin
-//     byte  state[4,Nb]
-//     state = in
-//     AddRoundKey(state, w[0, Nb-1])
-//     // See Sec. 5.1.4
-//     for round = 1 step 1 to Nr–1
-//       SubBytes(state)
-//       // See Sec. 5.1.1
-//       ShiftRows(state)
-//       // See Sec. 5.1.2
-//       MixColumns(state)
-//       // See Sec. 5.1.3
-//       AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
-//     end for
-//     SubBytes(state)
-//     ShiftRows(state)
-//     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
-//     out = state
-//   end
 
 void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
   uint8_t *state;
@@ -239,6 +218,151 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint
 
   debug_print_key_schedule(key_schedule, 10);
   debug_print_block(state, "\n\nCIPHER\n");
+}
+
+/*
+================================================================================
+INVERSE CIPHER
+--------------------------------------------------------------------------------
+InvCipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+  begin
+    byte  state[4,Nb]
+    state = in
+    AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1]) // See Sec. 5.1.4
+    for round = Nr-1 step -1 downto 1
+      InvShiftRows(state)
+      // See Sec. 5.3.1
+      InvSubBytes(state)
+      // See Sec. 5.3.2
+      AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+      InvMixColumns(state)
+      // See Sec. 5.3.3
+    end for
+    InvShiftRows(state)
+    InvSubBytes(state)
+    AddRoundKey(state, w[0, Nb-1])
+    out = state
+  end
+================================================================================
+*/
+
+void inv_sub_bytes(uint8_t *state) {
+  for (int i = 0; i < n_b; i++) {
+    state[i*n_b+0] = inv_s_box[state[i*n_b+0]];
+    state[i*n_b+1] = inv_s_box[state[i*n_b+1]];
+    state[i*n_b+2] = inv_s_box[state[i*n_b+2]];
+    state[i*n_b+3] = inv_s_box[state[i*n_b+3]];
+  }
+}
+
+void inv_shift_rows(uint8_t *state) {
+  uint8_t state_temp[BLOCK_LENGTH_IN_BYTES];
+  memcpy(state_temp, state, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+  // Row 1, shift right once
+  state[1+0] = state_temp[1+12];
+  state[1+4] = state_temp[1+0];
+  state[1+8] = state_temp[1+4];
+  state[1+12] = state_temp[1+8];
+
+  // Row 2, shift right twice
+  state[2+0]  = state_temp[2+8];
+  state[2+4]  = state_temp[2+12];
+  state[2+8]  = state_temp[2+0];
+  state[2+12] = state_temp[2+4];
+
+  // Row 3, shift right three times
+  state[3+0]  = state_temp[3+4];
+  state[3+4]  = state_temp[3+8];
+  state[3+8]  = state_temp[3+12];
+  state[3+12] = state_temp[3+0];
+}
+
+void inv_mix_columns(uint8_t *state) {
+  uint8_t a[] = {0x0e, 0x09, 0x0d, 0x0b}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+  uint8_t i, j, col[4], res[4];
+
+  for (j = 0; j < n_b; j++) {
+    for (i = 0; i < 4; i++) {
+      col[i] = state[n_b*j+i];
+    }
+
+    coef_mult(a, col, res);
+
+    for (i = 0; i < 4; i++) {
+      state[n_b*j+i] = res[i];
+    }
+  }
+}
+
+// InvCipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+//   begin
+//     byte  state[4,Nb]
+//     state = in
+//     AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1]) // See Sec. 5.1.4
+//     for round = Nr-1 step -1 downto 1
+//       InvShiftRows(state)
+//       // See Sec. 5.3.1
+//       InvSubBytes(state)
+//       // See Sec. 5.3.2
+//       AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+//       InvMixColumns(state)
+//       // See Sec. 5.3.3
+//     end for
+//     InvShiftRows(state)
+//     InvSubBytes(state)
+//     AddRoundKey(state, w[0, Nb-1])
+//     out = state
+//   end
+
+void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+  uint8_t *state;
+
+  state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+  memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+  if (DEBUG) {
+    printf("\nRound 0\n");
+    debug_print_block(state, "  Start: ");
+  }
+
+  add_round_key(state, key_schedule, n_r);
+  if (DEBUG) {
+    debug_print_key_schedule(key_schedule, n_r);
+  }
+
+  for (int rnd = 1; rnd < n_r; rnd++) {
+    if (DEBUG) printf("\n\nRound %2d\n", rnd);
+
+    debug_print_block(state, "  Start: ");
+
+    inv_shift_rows(state);
+    debug_print_block(state, "  Shift: ");
+
+    inv_sub_bytes(state);
+    debug_print_block(state, "  Subst: ");
+
+    add_round_key(state, key_schedule, n_r - rnd);
+
+    inv_mix_columns(state);
+    debug_print_block(state, "  Mxcol: ");
+
+    debug_print_key_schedule(key_schedule, rnd);
+  }
+
+  if (DEBUG) printf("\n\nRound 10\n");
+  debug_print_block(state, "  Start: ");
+
+  inv_shift_rows(state);
+  debug_print_block(state, "  Shift: ");
+
+  inv_sub_bytes(state);
+  debug_print_block(state, "  Subst: ");
+
+  add_round_key(state, key_schedule, 0);
+
+  debug_print_key_schedule(key_schedule, 10);
+  debug_print_block(state, "\n\nPLAINTEXT\n");
 }
 
 /*
@@ -359,7 +483,7 @@ MAIN
 */
 
 int main(int argc, char **argv) {
-  int opt, k_flag = 0, p_flag = 0;
+  int opt, k_flag = 0, p_flag = 0, d_flag = 0;
   uint8_t *in_block = NULL, *out_block = NULL, *key = NULL;
   int keylen;                            // Key length in bits
   uint8_t n_k;                           // Key length in bytes
@@ -372,10 +496,16 @@ int main(int argc, char **argv) {
 
   if (DEBUG) printf("INPUT\n");
 
-  while ((opt = getopt (argc, argv, "k:p:")) != -1) {
-    int len_bits = strlen(optarg) / 2 * 8;      // Length of hex string -> length of bits
+  while ((opt = getopt (argc, argv, "dk:p:")) != -1) {
+    int len_bits = 0;      // Length of hex string -> length of bits
     switch (opt) {
+      case 'd':
+        // Decrypt option
+        d_flag = 1;
+        break;
+
       case 'k':
+        len_bits = strlen(optarg) / 2 * 8;
         // User option to specify key as hex string
         if (!(len_bits == 128 || len_bits == 192 || len_bits == 256))
           exit_with_usage_message();
@@ -389,6 +519,7 @@ int main(int argc, char **argv) {
         break;
 
       case 'p': // Input block (plaintext)
+        len_bits = strlen(optarg) / 2 * 8;
         if (len_bits != 128)
           exit_with_usage_message();
 
@@ -420,5 +551,8 @@ int main(int argc, char **argv) {
 
   key_schedule = key_expansion(key, 4, 10);
 
-  cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
+  if (d_flag)
+    inv_cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
+  else
+    cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
 }
