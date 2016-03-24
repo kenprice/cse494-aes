@@ -549,7 +549,7 @@ int main(int argc, char **argv) {
       break;
   }
 
-  key_schedule = key_expansion(key, 4, 10);
+  key_schedule = key_expansion(key, n_k, n_r);
 
   if (d_flag)
     inv_cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
