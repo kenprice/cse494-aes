@@ -51,6 +51,7 @@ void exit_with_usage_message()
 uint8_t *hex_string_to_bytes(char *hex_string)
 {
 	const char *pos = hex_string;
+	std::string hexStr = hex_string;
 	uint8_t *val;
 	size_t count = 0, max = strlen(hex_string) / 2;
 
@@ -61,6 +62,7 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 		sscanf(pos, "%2hhx", &val[count]);
 		pos += 2;
 	}
+
 
 	return(val);
 }
@@ -147,6 +149,19 @@ void debug_print_key_schedule(uint8_t **key_schedule, int rnd)
 		printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
 	}
 }
+void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd)
+{
+	if (!DEBUG) return;
+
+	int printnum = 10 - rnd;
+	printf("round[%2d].ik_sch ", rnd);
+
+
+	for (int j = printnum * 4; j < n_b + printnum * 4; j++)
+	{
+		printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+	}
+}
 
 //Russian Peasant Multiplication algorithm 
 // Source: http://www.samiam.org/galois.html
@@ -170,7 +185,28 @@ uint8_t multiply(uint8_t a, uint8_t b)
 
 //takes a four-byte character array, and performs  rotate on it
 //1d 2c 3a 4f becomes 2c 3a 4f 1d
+//rorate to the left
 void rotate(uint8_t *in)
+{
+	uint8_t temp[4];
+	//old style copy. TODO: find a memcpy that works
+	temp[0] = in[0];
+	temp[1] = in[1];
+	temp[2] = in[2];
+	temp[3] = in[3];
+
+
+	in[0] = temp[1];
+	in[1] = temp[2];
+	in[2] = temp[3];
+	in[3] = temp[0];
+	return;
+}
+//takes a four-byte character array, and performs  rotate on it
+//1d 2c 3a 4f becomes  4f 1d 2c 3a 
+// ===================
+// Why does mix columns need to rotate to the right, when regular rotate needs to rotate to the left
+void rotate_mix(uint8_t *in)
 {
 	uint8_t temp[4];
 	//old style copy. TODO: find a memcpy that works
@@ -247,7 +283,7 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 	out_words = (uint8_t **)malloc(num_words * sizeof(uint8_t*));
 	for (int i = 0; i < num_words; i++)
 	{
-		out_words[i] = (uint8_t *)malloc(4 * sizeof(uint8_t));
+		out_words[i] = (uint8_t *)malloc(4 * sizeof(uint8_t));//allocate memory
 	}
 
 	for (int i = 0; i < n_k; i++)
@@ -315,12 +351,12 @@ void add_round_key(uint8_t *state, uint8_t **key_schedule, uint8_t rnd)//XORs ea
 	// xor the block state with the round key (block of the expanded key)
 	for (int i = 0; i < n_b; i++)
 	{
-		uint8_t see = i*n_b + 0;
-		uint8_t me = rnd * 4 + i;
-		state[see] ^= key_schedule[me][0];
-		state[i*n_b + 1] ^= key_schedule[rnd * 4 + i][1];
-		state[i*n_b + 2] ^= key_schedule[rnd * 4 + i][2];
-		state[i*n_b + 3] ^= key_schedule[rnd * 4 + i][3];
+		uint8_t stateIndex = i*n_b + 0;
+		uint8_t keyIndex = rnd * n_b + i;
+		state[stateIndex] ^= key_schedule[keyIndex][0];
+		state[i*n_b + 1] ^= key_schedule[keyIndex][1];
+		state[i*n_b + 2] ^= key_schedule[keyIndex][2];
+		state[i*n_b + 3] ^= key_schedule[keyIndex][3];
 	}
 }
 
@@ -383,7 +419,7 @@ void mix_columns(uint8_t *state)
 		for (i = 0; i < 4; i++)
 		{
 			res[i] = multiply(col[0], a[0]) ^ multiply(col[1], a[1]) ^ multiply(col[2], a[2]) ^ multiply(col[3], a[3]);
-			rotate(a);
+			rotate_mix(a);
 		}
 		for (i = 0; i < 4; i++)
 		{
@@ -407,30 +443,40 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint
 
 	add_round_key(state, key_schedule, 0);
 	if (DEBUG)
-	{
 		debug_print_key_schedule(key_schedule, 0);
-	}
+
 
 	for (int rnd = 1; rnd < n_r; rnd++)
 	{
 		if (DEBUG)
 		{
 			printf("\n\nround[%2d]", rnd);
-
 			debug_print_block(state, ".start ");
-			printf("\n\nround[%2d]", rnd);
-			sub_bytes(state);
+			printf("round[%2d]", rnd);
+		}
+
+		sub_bytes(state);
+		if (DEBUG)
+		{
 			debug_print_block(state, ".s_box ");
-			printf("\n\nround[%2d]", rnd);
-			shift_rows(state);
+			printf("round[%2d]", rnd);
+		}
+
+		shift_rows(state);
+		if (DEBUG)
+		{
 			debug_print_block(state, ".s_row ");
-			printf("\n\nround[%2d]", rnd);
-			mix_columns(state);
+			printf("round[%2d]", rnd);
+		}
+
+		mix_columns(state);
+		if (DEBUG)
 			debug_print_block(state, ".m_col ");
 
-			add_round_key(state, key_schedule, rnd);
+		add_round_key(state, key_schedule, rnd);
+		if (DEBUG)
 			debug_print_key_schedule(key_schedule, rnd);
-		}
+
 
 	}
 
@@ -439,18 +485,194 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint
 		printf("\n\nround[10]");
 		debug_print_block(state, ".start ");
 		printf("\n\nround[10]");
-		sub_bytes(state);
+	}
+
+	sub_bytes(state);
+	if (DEBUG)
+	{
 		debug_print_block(state, ".s_box ");
 		printf("\n\nround[10]");
-		shift_rows(state);
+	}
+	shift_rows(state);
+	if (DEBUG)
 		debug_print_block(state, ".s_row ");
 
-		add_round_key(state, key_schedule, n_r);
+	add_round_key(state, key_schedule, n_r);
+	if (DEBUG)
 		debug_print_key_schedule(key_schedule, 10);
-	}
-	debug_print_block(state, "\nround[10].output");
+
+	debug_print_block(state, "\nround[10].output ");
 }
 
+/*
+================================================================================
+INVERSE CIPHER
+--------------------------------------------------------------------------------
+InvCipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+	begin
+		byte  state[4,Nb]
+		state = in
+		AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1]) // See Sec. 5.1.4
+		for round = Nr-1 step -1 downto 1
+			InvShiftRows(state)
+			// See Sec. 5.3.1
+			InvSubBytes(state)
+			// See Sec. 5.3.2
+			AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
+			InvMixColumns(state)
+			// See Sec. 5.3.3
+		end for
+		InvShiftRows(state)
+		InvSubBytes(state)
+		AddRoundKey(state, w[0, Nb-1])
+		out = state
+	end
+================================================================================
+*/
+
+void inv_sub_bytes(uint8_t *state)
+{
+	for (int i = 0; i < n_b; i++)
+	{
+		state[i*n_b + 0] = ReverseSBox[state[i*n_b + 0]];
+		state[i*n_b + 1] = ReverseSBox[state[i*n_b + 1]];
+		state[i*n_b + 2] = ReverseSBox[state[i*n_b + 2]];
+		state[i*n_b + 3] = ReverseSBox[state[i*n_b + 3]];
+	}
+}
+
+void inv_shift_rows(uint8_t *state)
+{
+	uint8_t state_temp[BLOCK_LENGTH_IN_BYTES];
+	memcpy(state_temp, state, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+	// Row 1, shift right once
+	state[1 + 0] = state_temp[1 + 12];
+	state[1 + 4] = state_temp[1 + 0];
+	state[1 + 8] = state_temp[1 + 4];
+	state[1 + 12] = state_temp[1 + 8];
+
+	// Row 2, shift right twice
+	state[2 + 0] = state_temp[2 + 8];
+	state[2 + 4] = state_temp[2 + 12];
+	state[2 + 8] = state_temp[2 + 0];
+	state[2 + 12] = state_temp[2 + 4];
+
+	// Row 3, shift right three times
+	state[3 + 0] = state_temp[3 + 4];
+	state[3 + 4] = state_temp[3 + 8];
+	state[3 + 8] = state_temp[3 + 12];
+	state[3 + 12] = state_temp[3 + 0];
+}
+
+void inv_mix_columns(uint8_t *state)
+{
+	uint8_t a[] = { 0x0e, 0x09, 0x0d, 0x0b }; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+	uint8_t i, j, col[4], res[4];
+
+	for (j = 0; j < n_b; j++)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			col[i] = state[n_b*j + i];
+		}
+
+		//multiply 
+		// col = { s0, s1, s2 ,s3} 
+		// a = { 0x02, 0x01, 0x01, 0x03 }
+		//res[0] = col[0]*a[0] XOR col[1]*a[1] XOR col[2]*a[2] XOR col[3]*a[3]
+		//for res[1], shift the array by one byte.  { 0x02, 0x03, 0x01, 0x01  } -> { 0x01 0x02, 0x03, 0x01  }. pretty much call rotate on it.
+		for (i = 0; i < 4; i++)
+		{
+			res[i] = multiply(col[0], a[0]) ^ multiply(col[1], a[1]) ^ multiply(col[2], a[2]) ^ multiply(col[3], a[3]);
+			rotate(a);
+		}
+
+		for (i = 0; i < 4; i++)
+		{
+			state[n_b*j + i] = res[i];
+		}
+	}
+}
+
+void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r)
+{
+	uint8_t *state;
+
+	state = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+	memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+	if (DEBUG)
+	{
+		printf("\nround[ 0]");
+		debug_print_block(state, ".iinput ");
+	}
+
+	add_round_key(state, key_schedule, n_r);
+	if (DEBUG)
+		debug_print_key_schedule_dec(key_schedule, n_r);
+
+
+	for (int rnd = 1; rnd < n_r; rnd++)
+	{
+		if (DEBUG)
+		{
+			printf("\n\nround[%2d]", rnd);
+			debug_print_block(state, ".istart ");
+			printf("round[%2d]", rnd);
+		}
+
+		inv_shift_rows(state);
+		if (DEBUG)
+		{
+			debug_print_block(state, ".is_row ");
+			printf("round[%2d]", rnd);
+		}
+
+		inv_sub_bytes(state);
+		if (DEBUG)
+		{
+			debug_print_block(state, ".is_box ");
+
+		}
+		add_round_key(state, key_schedule, n_r - rnd);
+
+		if (DEBUG)
+			debug_print_key_schedule_dec(key_schedule, rnd);
+
+		inv_mix_columns(state);
+
+		if (DEBUG)
+		{
+			printf("\nround[%2d]", rnd);
+			debug_print_block(state, ".ik_add ");
+		}
+
+	}
+
+	if (DEBUG)
+	{
+		printf("\n\nround[10]");
+		debug_print_block(state, ".istart ");
+		printf("\n\nround[10]");
+	}
+
+	inv_shift_rows(state);
+	if (DEBUG)
+	{
+		debug_print_block(state, ".is_row ");
+		printf("\n\nround[10]");
+	}
+	inv_sub_bytes(state);
+	if (DEBUG)
+		debug_print_block(state, ".is_box ");
+
+	add_round_key(state, key_schedule, 0);
+	if (DEBUG)
+		debug_print_key_schedule_dec(key_schedule, 10);
+
+	debug_print_block(state, "\nround[10].ioutput ");
+}
 
 
 //process arguments. getOpt.h does not exist in windows
@@ -529,10 +751,10 @@ int main(int argc, char **argv)
 
 
 
-	//if (payload.d_flag)
-	//	inv_cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
-//	else
-	cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
+	if (payload.d_flag)
+		inv_cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
+	else
+		cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
 
 
 }

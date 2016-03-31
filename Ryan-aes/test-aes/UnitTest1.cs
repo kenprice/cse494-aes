@@ -42,7 +42,7 @@ namespace Project4Test
         [TestMethod]
         public void Encrypt_test1()
         {
-            String baseFile = "test1.txt";
+            String baseFile = "EncTest1.txt";
             String pathToExe = baseDir + @"\Debug\" + exeName;
 
             inputArgs input;
@@ -57,7 +57,24 @@ namespace Project4Test
             else
                 Assert.Inconclusive(Inconclusive);
         }
-       
+        [TestMethod]
+        public void Decrypt_test1()
+        {
+            String baseFile = "DecTest1.txt";
+            String pathToExe = baseDir + @"\Debug\" + exeName;
+
+            inputArgs input;
+            input.args = "-d -k 000102030405060708090a0b0c0d0e0f -i 69c4e0d86a7b0430d8cdb78070b4c55a";
+
+
+            String outputFilePath = baseTestsDir + baseFile + ".out";
+            String expectedOutputPath = baseTestsDir + baseFile + ".expected";
+            ProcessTestCase(pathToExe, input, outputFilePath);
+            if (allToConsole == false)
+                Assert.AreEqual(true, FileCompare(outputFilePath, expectedOutputPath));//true means files are same
+            else
+                Assert.Inconclusive(Inconclusive);
+        }
 
         //repeater method to process all files
         public void ProcessTestCase(String pathToExe, inputArgs input, String outputFilePath)
