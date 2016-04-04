@@ -154,30 +154,70 @@ void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd)
 	if (!DEBUG) return;
 
 	int printnum = 10 - rnd;
-	printf("round[%2d].ik_sch ", rnd);
-
-
-	for (int j = printnum * 4; j < n_b + printnum * 4; j++)
+	if (rnd == 10)//if it is 10, print out 0
 	{
-		printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+		printf("round[%2d].ik_sch ", 0);
+		for (int j = rnd * 4; j < n_b + rnd * 4; j++)
+		{
+			printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+		}
 	}
+	else
+	{
+		if (rnd == 0)//if it is 0, print out 10
+		{
+			printf("round[%2d].ik_sch ", 10);
+			for (int j = rnd * 4; j < n_b + rnd * 4; j++)
+			{
+				printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+			}
+		}
+		else
+		{
+			printf("round[%2d].ik_sch ", rnd);
+			for (int j = printnum * 4; j < n_b + printnum * 4; j++)
+			{
+				printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
+			}
+		}
+	}
+	
+
+
+	
 }
 
 //Russian Peasant Multiplication algorithm 
-// Source: http://www.samiam.org/galois.html
-uint8_t multiply(uint8_t a, uint8_t b)
+// Source: https://raw.githubusercontent.com/openluopworld/aes/master/aes.c
+/* Multiply two numbers in the GF(2 ^ 8) finite field defined
+* by the polynomial x ^ 8 + x ^ 4 + x ^ 3 + x + 1 = 0
+* using the Russian Peasant Multiplication algorithm
+* (the other way being to do carry - less multiplication followed by a modular reduction)
+* */
+static uint8_t multiply(uint8_t t1, uint8_t t2)
 {
-	uint8_t p = 0;
-	uint8_t counter;
-	uint8_t hi_bit_set;
-	for (counter = 0; counter < 8; counter++)
+	uint8_t a = t1;//copy values to prevent overwriting the callee's values
+	uint8_t b = t2;
+	uint8_t p = 0; /* the product of the multiplication */
+	while (b) 
 	{
-		if ((b & 1) == 1)
-			p ^= a;
-		hi_bit_set = (a & 0x80);
-		a <<= 1;
-		if (hi_bit_set == 0x80)
-			a ^= 0x1b;
+		/* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
+		if (b & 1)
+		{
+			p ^= a; /* since we're in GF(2^m), addition is an XOR */
+		}
+
+		if (a & 0x80)
+		{
+			/* GF modulo: if a >= 128, then it will overflow when shifted left, so reduce */
+			/* XOR with the primitive polynomial x^8 + x^4 + x^3 + x + 1 -- you can change it but it must be irreducible */
+			a = (a << 1) ^ 0x11b;
+		}
+		else
+		{
+			a <<= 1; /* equivalent to a*2 */
+		}
+		/* equivalent to b/2 */
 		b >>= 1;
 	}
 	return p;
@@ -567,30 +607,30 @@ void inv_shift_rows(uint8_t *state)
 
 void inv_mix_columns(uint8_t *state)
 {
-	uint8_t a[] = { 0x0e, 0x09, 0x0d, 0x0b }; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+	uint8_t a[] = { 0x0e, 0x0b, 0x0d, 0x09 }; 
 	uint8_t i, j, col[4], res[4];
 
 	for (j = 0; j < n_b; j++)
 	{
 		for (i = 0; i < 4; i++)
 		{
-			col[i] = state[n_b*j + i];
+			col[i] = state[n_b*j + i];//copy data
 		}
 
 		//multiply 
 		// col = { s0, s1, s2 ,s3} 
-		// a = { 0x02, 0x01, 0x01, 0x03 }
+		// a = { 0x0e, 0x0b, 0x0d, 0x09 }
 		//res[0] = col[0]*a[0] XOR col[1]*a[1] XOR col[2]*a[2] XOR col[3]*a[3]
-		//for res[1], shift the array by one byte.  { 0x02, 0x03, 0x01, 0x01  } -> { 0x01 0x02, 0x03, 0x01  }. pretty much call rotate on it.
+		//for res[1], shift the array by one byte.  { 0x0e, 0x0b, 0x0d, 0x09 } -> { 0x09, 0x0e, 0x0b, 0x0d  }. pretty much call rotate on it.
 		for (i = 0; i < 4; i++)
 		{
 			res[i] = multiply(col[0], a[0]) ^ multiply(col[1], a[1]) ^ multiply(col[2], a[2]) ^ multiply(col[3], a[3]);
-			rotate(a);
+			rotate_mix(a);
 		}
 
 		for (i = 0; i < 4; i++)
 		{
-			state[n_b*j + i] = res[i];
+			state[n_b*j + i] = res[i];//put back data
 		}
 	}
 }
@@ -640,14 +680,13 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 		if (DEBUG)
 			debug_print_key_schedule_dec(key_schedule, rnd);
 
-		inv_mix_columns(state);
-
 		if (DEBUG)
 		{
 			printf("\nround[%2d]", rnd);
 			debug_print_block(state, ".ik_add ");
 		}
 
+		inv_mix_columns(state);
 	}
 
 	if (DEBUG)
@@ -669,7 +708,7 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 
 	add_round_key(state, key_schedule, 0);
 	if (DEBUG)
-		debug_print_key_schedule_dec(key_schedule, 10);
+		debug_print_key_schedule_dec(key_schedule, 0);
 
 	debug_print_block(state, "\nround[10].ioutput ");
 }
@@ -744,7 +783,7 @@ int main(int argc, char **argv)
 {
 	struct package payload;
 
-
+	multiply(0xd4, 0x02);// should equal 0xb3, (int) 179
 
 	//getopt windows code
 	getOpt(argc, argv, &payload);
