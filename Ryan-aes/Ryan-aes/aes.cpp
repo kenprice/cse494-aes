@@ -637,18 +637,18 @@ void inv_mix_columns(uint8_t *state)
 
 void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r)
 {
-	uint8_t *state;
+	//uint8_t *state;
 
-	state = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-	memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+	//state = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+	//memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
 	if (DEBUG)
 	{
 		printf("\nround[ 0]");
-		debug_print_block(state, ".iinput ");
+		debug_print_block(in, ".iinput ");
 	}
 
-	add_round_key(state, key_schedule, n_r);
+	add_round_key(in, key_schedule, n_r);
 	if (DEBUG)
 		debug_print_key_schedule_dec(key_schedule, n_r);
 
@@ -658,24 +658,24 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 		if (DEBUG)
 		{
 			printf("\n\nround[%2d]", rnd);
-			debug_print_block(state, ".istart ");
+			debug_print_block(in, ".istart ");
 			printf("round[%2d]", rnd);
 		}
 
-		inv_shift_rows(state);
+		inv_shift_rows(in);
 		if (DEBUG)
 		{
-			debug_print_block(state, ".is_row ");
+			debug_print_block(in, ".is_row ");
 			printf("round[%2d]", rnd);
 		}
 
-		inv_sub_bytes(state);
+		inv_sub_bytes(in);
 		if (DEBUG)
 		{
-			debug_print_block(state, ".is_box ");
+			debug_print_block(in, ".is_box ");
 
 		}
-		add_round_key(state, key_schedule, n_r - rnd);
+		add_round_key(in, key_schedule, n_r - rnd);
 
 		if (DEBUG)
 			debug_print_key_schedule_dec(key_schedule, rnd);
@@ -683,34 +683,34 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 		if (DEBUG)
 		{
 			printf("\nround[%2d]", rnd);
-			debug_print_block(state, ".ik_add ");
+			debug_print_block(in, ".ik_add ");
 		}
 
-		inv_mix_columns(state);
+		inv_mix_columns(in);
 	}
 
 	if (DEBUG)
 	{
 		printf("\n\nround[10]");
-		debug_print_block(state, ".istart ");
+		debug_print_block(in, ".istart ");
 		printf("\n\nround[10]");
 	}
 
-	inv_shift_rows(state);
+	inv_shift_rows(in);
 	if (DEBUG)
 	{
-		debug_print_block(state, ".is_row ");
+		debug_print_block(in, ".is_row ");
 		printf("\n\nround[10]");
 	}
-	inv_sub_bytes(state);
+	inv_sub_bytes(in);
 	if (DEBUG)
-		debug_print_block(state, ".is_box ");
+		debug_print_block(in, ".is_box ");
 
-	add_round_key(state, key_schedule, 0);
+	add_round_key(in, key_schedule, 0);
 	if (DEBUG)
 		debug_print_key_schedule_dec(key_schedule, 0);
 
-	debug_print_block(state, "\nround[10].ioutput ");
+	debug_print_block(in, "\nround[10].ioutput ");
 }
 
 
@@ -779,11 +779,24 @@ void getOpt(int argc, char **argv, struct package *payload)
 
 	payload->key_schedule = key_expansion(payload->key, payload->n_k, payload->n_r);
 }
+void delete_struct(struct package *del_package)
+{
+	delete(del_package->key);
+	delete(del_package->in_block);
+	size_t num_words = n_b * (del_package->n_r + 1);
+	for (int i = 0; i < num_words; i++)
+	{
+		delete(del_package->key_schedule[i]);
+	}
+	delete(del_package->key_schedule);
+}
 int main(int argc, char **argv)
 {
+//	_CrtSetBreakAlloc(199); //memory leak reported ith memory allocation. This will break at ith.
+
 	struct package payload;
 
-	multiply(0xd4, 0x02);// should equal 0xb3, (int) 179
+	//multiply(0xd4, 0x02);// should equal 0xb3, (int) 179
 
 	//getopt windows code
 	getOpt(argc, argv, &payload);
@@ -795,5 +808,12 @@ int main(int argc, char **argv)
 	else
 		cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
 
+	delete_struct(&payload);
+#ifdef _WIN32 
+#if defined(_MSC_VER) 
+
+	_CrtDumpMemoryLeaks();//checks for memory leak. MUST USE DEBUGGER
+#endif
+#endif
 
 }
