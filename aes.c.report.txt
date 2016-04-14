@@ -1,0 +1,77 @@
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers aes.c
+aes.c:117: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:117: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:118: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:118: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:119: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:119: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:120: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:120: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:157: warning: ARR02-C: Explicitly specify array dimensions, even if implic
+itly defined by an initializer
+aes.c:173: warning: DCL13-C: Declare function parameters that are pointers to va
+lues not changed by the function as const: out
+aes.c:173: warning: DCL01-C: Do not reuse variable names in subscopes: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:176: error: EXP34-C: Ensure pointer is valid before dereferencing it
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:282: warning: ARR02-C: Explicitly specify array dimensions, even if implic
+itly defined by an initializer
+aes.c:318: warning: DCL13-C: Declare function parameters that are pointers to va
+lues not changed by the function as const: out
+aes.c:318: warning: DCL01-C: Do not reuse variable names in subscopes: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:321: error: EXP34-C: Ensure pointer is valid before dereferencing it
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:318: warning: DCL02-C: Use visually distinct identifiers: n_b
+aes.c:405: warning: DCL00-C: Const-qualify immutable objects: aux
+aes.c:416: warning: DCL00-C: Const-qualify immutable objects: num_words
+aes.c:420: error: EXP34-C: Ensure pointer is valid before dereferencing it
+aes.c:435: error: INT33-C: Ensure that division and modulo operations do not res
+ult in divide-by-zero errors
+aes.c:438: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:438: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:438: error: INT33-C: Ensure that division and modulo operations do not res
+ult in divide-by-zero errors
+aes.c:440: error: INT33-C: Ensure that division and modulo operations do not res
+ult in divide-by-zero errors
+aes.c:443: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:443: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:444: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:444: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:445: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:445: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:446: warning: INT14-C: Avoid performing bitwise and arithmetic operations 
+on the same data
+aes.c:446: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:462: warning: DCL00-C: Const-qualify immutable objects: max
+aes.c:464: error: EXP34-C: Ensure pointer is valid before dereferencing it
+aes.c:467: warning: EXP12-C: Do not ignore values returned by functions: sscanf
+aes.c:540: warning: MSC01-C: Strive for logical completeness
+
+
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers aes.h
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers gf.h
