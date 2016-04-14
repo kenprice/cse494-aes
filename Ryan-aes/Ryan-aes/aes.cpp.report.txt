@@ -1,0 +1,9 @@
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers aes.h > aes.h.report.txt
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers aes.cpp > aes.cpp.report.txt
+"/home/rose/src/rosecheckers/aes.h", line 71: warning: last line of file ends
+          without a newline
+  };
+    ^
+
+aes.cpp:21: warning: MEM41-CPP: A class with a pointer data member should probably define a copy constructor, copy assignment, and destructor.
+aes.cpp:23: warning: OBJ00-CPP: Public data member
