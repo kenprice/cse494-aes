@@ -229,7 +229,7 @@ static uint8_t multiply(uint8_t t1, uint8_t t2)
 		/* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
 		if (b & 1)
 		{
-			p ^= a; /* since we're in GF(2^m), addition is an XOR */
+			p = a ^ p; /* since we're in GF(2^m), addition is an XOR */
 		}
 
 		if (a & 0x80)
@@ -403,10 +403,10 @@ void add_round_key(uint8_t *state, uint8_t **key_schedule, uint8_t rnd)//XORs ea
 	{
 		uint8_t stateIndex = i*n_b + 0;
 		uint8_t keyIndex = rnd * n_b + i;
-		state[stateIndex] ^= key_schedule[keyIndex][0];
-		state[i*n_b + 1] ^= key_schedule[keyIndex][1];
-		state[i*n_b + 2] ^= key_schedule[keyIndex][2];
-		state[i*n_b + 3] ^= key_schedule[keyIndex][3];
+		state[stateIndex] = state[stateIndex] ^ key_schedule[keyIndex][0];
+		state[i*n_b + 1] = state[i*n_b + 1] ^ key_schedule[keyIndex][1];
+		state[i*n_b + 2] = state[i*n_b + 2] ^ key_schedule[keyIndex][2];
+		state[i*n_b + 3] = state[i*n_b + 3] ^ key_schedule[keyIndex][3];
 	}
 }
 
