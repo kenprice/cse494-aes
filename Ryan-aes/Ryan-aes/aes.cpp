@@ -493,7 +493,7 @@ void mix_columns(uint8_t *state)
 	}
 }
 
-void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r)
+void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r)
 {
 	uint8_t *state = out;//create alias to make it it easy to not rename the variables below
 
@@ -657,7 +657,7 @@ void inv_mix_columns(uint8_t *state)
 	}
 }
 
-void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r)
+void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r)
 {
 	//uint8_t *state;
 
@@ -825,9 +825,9 @@ int main(int argc, char **argv)
 
 
 	if (payload->d_flag)
-		inv_cipher(payload->out_block, payload->in_block, payload->key_schedule, n_b, payload->n_k, payload->n_r);
+		inv_cipher(payload->out_block, payload->in_block, payload->key_schedule, payload->n_k, payload->n_r);
 	else
-		cipher(payload->out_block, payload->in_block, payload->key_schedule, n_b, payload->n_k, payload->n_r);
+		cipher(payload->out_block, payload->in_block, payload->key_schedule, payload->n_k, payload->n_r);
 
 	delete payload;
 #ifdef _WIN32 
