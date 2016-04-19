@@ -94,7 +94,7 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 			printf("sscanf returned EOF.");
 			exit(1);
 		}
-		
+
 		pos += 2;//get next two characters
 	}
 
@@ -825,6 +825,9 @@ void process_arguments(int argc, char **argv, struct package *payload)
 	case 256:
 		payload->n_k = 8;      payload->n_r = 14;
 		break;
+	default:
+		printf("keylen is not 128/192/256.");
+		exit(1);
 	}
 
 	payload->key_schedule = key_expansion(payload->key, payload->n_k, payload->n_r);
