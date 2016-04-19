@@ -81,6 +81,11 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 	size_t max = strlen(hex_string) / 2;//how far do we need to iterate
 
 	val = (uint8_t *)malloc(strlen(hex_string) / 2 * sizeof(uint8_t));//allocate memory
+	if(val == NULL)
+	{
+		printf("malloc returned null. 123");
+		exit(1);
+	}
 
 	for (count = 0; count < max; count++)
 	{
@@ -331,9 +336,19 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 
 	// need to cast to uint8 for c++
 	out_words = (uint8_t **)malloc(num_words * sizeof(uint8_t*));
+	if (out_words == NULL)
+	{
+		printf("malloc returned null. 12322");
+		exit(1);
+	}
 	for (int i = 0; i < num_words; i++)
 	{
 		out_words[i] = (uint8_t *)malloc(4 * sizeof(uint8_t));//allocate memory
+		if (out_words[i] == NULL)
+		{
+			printf("malloc returned null. 1233432");
+			exit(1);
+		}
 	}
 
 	for (int i = 0; i < n_k; i++)
@@ -646,8 +661,6 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 {
 	//uint8_t *state;
 
-	//state = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-	//memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
 	if (DEBUG)
 	{
@@ -769,7 +782,11 @@ void process_arguments(int argc, char **argv, struct package *payload)
 
 		payload->in_block = hex_string_to_bytes(argv[base_index]);
 		payload->out_block = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-
+		if (payload->out_block == NULL)
+		{
+			printf("malloc returned null. 1267773");
+			exit(1);
+		}
 		memcpy(payload->out_block, payload->in_block, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 		payload->in_flag = 1;
 
