@@ -451,7 +451,7 @@ void shift_rows(uint8_t *state)
 
 void mix_columns(uint8_t *state)
 {
-	uint8_t a[] = { 0x02, 0x03, 0x01, 0x01 };
+	uint8_t a[4] = { 0x02, 0x03, 0x01, 0x01 };
 	uint8_t i, j, col[4], res[4];
 
 	for (j = 0; j < n_b; j++)
@@ -614,7 +614,7 @@ void inv_shift_rows(uint8_t *state)
 
 void inv_mix_columns(uint8_t *state)
 {
-	uint8_t a[] = { 0x0e, 0x0b, 0x0d, 0x09 };
+	uint8_t a[4] = { 0x0e, 0x0b, 0x0d, 0x09 };
 	uint8_t i, j, col[4], res[4];
 
 	for (j = 0; j < n_b; j++)
