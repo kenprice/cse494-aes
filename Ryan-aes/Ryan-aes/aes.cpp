@@ -36,6 +36,29 @@ struct package
 		out_block = NULL;
 		key = NULL;
 	}
+	~package()
+	{
+		key_flag = 0;
+		in_flag = 0;
+		d_flag = 0;
+
+		if (key != NULL)
+			delete key;
+		if (in_block != NULL)
+			delete in_block;
+		if (out_block != NULL)
+			delete out_block;
+
+		size_t num_words = n_b * (n_r + 1);
+		for (size_t i = 0; i < num_words; i++)
+		{
+			if (key_schedule[i] != NULL)
+				delete key_schedule[i];
+		}
+		if (key_schedule != NULL)
+			delete key_schedule;
+
+	}
 };
 
 /*
@@ -50,21 +73,23 @@ void exit_with_usage_message()
 }
 uint8_t *hex_string_to_bytes(char *hex_string)
 {
-	const char *pos = hex_string;
-	std::string hexStr = hex_string;
-	uint8_t *val;
-	size_t count = 0, max = strlen(hex_string) / 2;
+	const char *pos = hex_string;//copy pointer from hex_string to pos
+	std::string hexStr = hex_string;//create string
+	uint8_t *val;//create pointer to the hex bytes
 
-	val = (uint8_t *)malloc(strlen(hex_string) / 2 * sizeof(uint8_t));
+	size_t count = 0;
+	size_t max = strlen(hex_string) / 2;//how far do we need to iterate
+
+	val = (uint8_t *)malloc(strlen(hex_string) / 2 * sizeof(uint8_t));//allocate memory
 
 	for (count = 0; count < max; count++)
 	{
-		sscanf(pos, "%2hhx", &val[count]);
-		pos += 2;
+		sscanf(pos, "%2hhx", &val[count]);//scaned from  pos. get two characters and turn them into Hexadecimal. place into val[count]
+		pos += 2;//get next two characters
 	}
 
 
-	return(val);
+	return val;
 }
 uint8_t addition(uint8_t a, uint8_t b)
 {
@@ -181,10 +206,10 @@ void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd)
 			}
 		}
 	}
-	
 
 
-	
+
+
 }
 
 //Russian Peasant Multiplication algorithm 
@@ -199,7 +224,7 @@ static uint8_t multiply(uint8_t t1, uint8_t t2)
 	uint8_t a = t1;//copy values to prevent overwriting the callee's values
 	uint8_t b = t2;
 	uint8_t p = 0; /* the product of the multiplication */
-	while (b) 
+	while (b)
 	{
 		/* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
 		if (b & 1)
@@ -225,7 +250,7 @@ static uint8_t multiply(uint8_t t1, uint8_t t2)
 
 //takes a four-byte character array, and performs  rotate on it
 //1d 2c 3a 4f becomes 2c 3a 4f 1d
-//rorate to the left
+//rotate to the left
 void rotate(uint8_t *in)
 {
 	uint8_t temp[4];
@@ -262,20 +287,6 @@ void rotate_mix(uint8_t *in)
 	in[3] = temp[2];
 	return;
 }
-/* Calculate the rcon used in key expansion */
-uint8_t rcon(uint8_t in)
-{
-	uint8_t c = 1;
-	if (in == 0)
-		return 0;
-	while (in != 1)
-	{
-		c = multiply(c, 2);
-		in--;
-	}
-	return c;
-}
-
 
 /*
 ================================
@@ -309,7 +320,6 @@ void sub_word(uint8_t *out_word)
 	for (int i = 0; i < 4; i++)
 		out_word[i] = ForwardSBox[out_word[i]];
 }
-
 
 uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 {
@@ -470,10 +480,7 @@ void mix_columns(uint8_t *state)
 
 void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r)
 {
-	uint8_t *state;
-
-	state = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-	memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+	uint8_t *state = out;//create alias to make it it easy to not rename the variables below
 
 	if (DEBUG)
 	{
@@ -524,14 +531,14 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint
 	{
 		printf("\n\nround[10]");
 		debug_print_block(state, ".start ");
-		printf("\n\nround[10]");
+		printf("round[10]");
 	}
 
 	sub_bytes(state);
 	if (DEBUG)
 	{
 		debug_print_block(state, ".s_box ");
-		printf("\n\nround[10]");
+		printf("round[10]");
 	}
 	shift_rows(state);
 	if (DEBUG)
@@ -607,7 +614,7 @@ void inv_shift_rows(uint8_t *state)
 
 void inv_mix_columns(uint8_t *state)
 {
-	uint8_t a[] = { 0x0e, 0x0b, 0x0d, 0x09 }; 
+	uint8_t a[] = { 0x0e, 0x0b, 0x0d, 0x09 };
 	uint8_t i, j, col[4], res[4];
 
 	for (j = 0; j < n_b; j++)
@@ -650,14 +657,18 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 
 	add_round_key(in, key_schedule, n_r);
 	if (DEBUG)
+	{
 		debug_print_key_schedule_dec(key_schedule, n_r);
+		printf("\n");
+	}
+		
 
 
 	for (int rnd = 1; rnd < n_r; rnd++)
 	{
 		if (DEBUG)
 		{
-			printf("\n\nround[%2d]", rnd);
+			printf("\nround[%2d]", rnd);
 			debug_print_block(in, ".istart ");
 			printf("round[%2d]", rnd);
 		}
@@ -691,16 +702,16 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 
 	if (DEBUG)
 	{
-		printf("\n\nround[10]");
+		printf("\nround[10]");
 		debug_print_block(in, ".istart ");
-		printf("\n\nround[10]");
+		printf("round[10]");
 	}
 
 	inv_shift_rows(in);
 	if (DEBUG)
 	{
 		debug_print_block(in, ".is_row ");
-		printf("\n\nround[10]");
+		printf("round[10]");
 	}
 	inv_sub_bytes(in);
 	if (DEBUG)
@@ -715,7 +726,7 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, 
 
 
 //process arguments. getOpt.h does not exist in windows
-void getOpt(int argc, char **argv, struct package *payload)
+void process_arguments(int argc, char **argv, struct package *payload)
 {
 	int base_index = 1;
 	int len_bits = 0;
@@ -757,6 +768,9 @@ void getOpt(int argc, char **argv, struct package *payload)
 			exit_with_usage_message();
 
 		payload->in_block = hex_string_to_bytes(argv[base_index]);
+		payload->out_block = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+
+		memcpy(payload->out_block, payload->in_block, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 		payload->in_flag = 1;
 
 	}
@@ -779,36 +793,26 @@ void getOpt(int argc, char **argv, struct package *payload)
 
 	payload->key_schedule = key_expansion(payload->key, payload->n_k, payload->n_r);
 }
-void delete_struct(struct package *del_package)
-{
-	delete(del_package->key);
-	delete(del_package->in_block);
-	size_t num_words = n_b * (del_package->n_r + 1);
-	for (int i = 0; i < num_words; i++)
-	{
-		delete(del_package->key_schedule[i]);
-	}
-	delete(del_package->key_schedule);
-}
+
 int main(int argc, char **argv)
 {
-//	_CrtSetBreakAlloc(199); //memory leak reported ith memory allocation. This will break at ith.
+	//_CrtSetBreakAlloc(202); //memory leak reported ith memory allocation. This will break at ith.
 
-	struct package payload;
+	struct package *payload = new package;
 
 	//multiply(0xd4, 0x02);// should equal 0xb3, (int) 179
 
 	//getopt windows code
-	getOpt(argc, argv, &payload);
+	process_arguments(argc, argv, payload);
 
 
 
-	if (payload.d_flag)
-		inv_cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
+	if (payload->d_flag)
+		inv_cipher(payload->out_block, payload->in_block, payload->key_schedule, n_b, payload->n_k, payload->n_r);
 	else
-		cipher(payload.out_block, payload.in_block, payload.key_schedule, n_b, payload.n_k, payload.n_r);
+		cipher(payload->out_block, payload->in_block, payload->key_schedule, n_b, payload->n_k, payload->n_r);
 
-	delete_struct(&payload);
+	delete payload;
 #ifdef _WIN32 
 #if defined(_MSC_VER) 
 
