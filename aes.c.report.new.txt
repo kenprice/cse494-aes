@@ -1,0 +1,20 @@
+rose@rosebud:~/src/rosecheckers$ ./rosecheckers 494/aes.c
+aes.c:117: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:117: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:118: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:118: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:119: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:119: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:120: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:120: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:471: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:471: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:471: error: INT33-C: Ensure that division and modulo operations do not result in divide-by-zero errors
+aes.c:476: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:476: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:477: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:477: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:478: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:478: warning: INT13-C: Use bitwise operators only on unsigned operands
+aes.c:479: warning: INT14-C: Avoid performing bitwise and arithmetic operations on the same data
+aes.c:479: warning: INT13-C: Use bitwise operators only on unsigned operands

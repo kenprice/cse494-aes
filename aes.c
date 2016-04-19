@@ -114,10 +114,10 @@ Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
 void add_round_key(uint8_t *state, uint8_t **key_schedule, uint8_t rnd) {
   // xor the block state with the round key (block of the expanded key)
   for (int i = 0; i < n_b; i++) {
-    state[i*n_b+0] ^= key_schedule[rnd*4+i][0];
-    state[i*n_b+1] ^= key_schedule[rnd*4+i][1];
-    state[i*n_b+2] ^= key_schedule[rnd*4+i][2];
-    state[i*n_b+3] ^= key_schedule[rnd*4+i][3];
+    state[i*n_b+0] = state[i*n_b+0] ^ key_schedule[rnd*4+i][0];
+    state[i*n_b+1] = state[i*n_b+1] ^ key_schedule[rnd*4+i][1];
+    state[i*n_b+2] = state[i*n_b+2] ^ key_schedule[rnd*4+i][2];
+    state[i*n_b+3] = state[i*n_b+3] ^ key_schedule[rnd*4+i][3];
   }
 }
 
@@ -154,7 +154,7 @@ void shift_rows(uint8_t *state) {
 }
 
 void mix_columns(uint8_t *state) {
-  uint8_t a[] = {0x02, 0x01, 0x01, 0x03}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+  uint8_t a[4] = {0x02, 0x01, 0x01, 0x03}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
   uint8_t i, j, col[4], res[4];
 
   for (j = 0; j < n_b; j++) {
@@ -170,10 +170,15 @@ void mix_columns(uint8_t *state) {
   }
 }
 
-void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+void cipher(uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r) {
   uint8_t *state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+  if(state == NULL)
+  {
+	  printf("malloc returned NULL. 123");
+	  exit(1);
+  }
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
   if (DEBUG) {
@@ -279,7 +284,7 @@ void inv_shift_rows(uint8_t *state) {
 }
 
 void inv_mix_columns(uint8_t *state) {
-  uint8_t a[] = {0x0e, 0x09, 0x0d, 0x0b}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
+  uint8_t a[4] = {0x0e, 0x09, 0x0d, 0x0b}; // a(x) = {02} + {01}x + {01}x2 + {03}x3
   uint8_t i, j, col[4], res[4];
 
   for (j = 0; j < n_b; j++) {
@@ -315,10 +320,15 @@ void inv_mix_columns(uint8_t *state) {
 //     out = state
 //   end
 
-void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) {
+void inv_cipher(uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r) {
   uint8_t *state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
+   if(state == NULL)
+  {
+	  printf("malloc returned NULL. 12355");
+	  exit(1);
+  }
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
   if (DEBUG) {
@@ -402,7 +412,7 @@ void rot_word(uint8_t *out_word) {
   // Input: 4-byte word
   // Output: Same 4-byte word, but rotated to the left cyclically
   //   e.g. [a0, a1, a2, a3] => [a1, a2, a3, a0]
-  uint8_t aux = out_word[0];
+  const uint8_t aux = out_word[0];
   out_word[0] = out_word[1];
   out_word[1] = out_word[2];
   out_word[2] = out_word[3];
@@ -413,13 +423,23 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
   // Input: key
   // Output: Nb * (Nr + 1) array of words (key schedule)
   uint8_t **out_words;
-  uint8_t num_words = n_b * (n_r + 1);
+  const uint8_t num_words = n_b * (n_r + 1);
   uint8_t temp[4];
 
   // Let's allocate space for this word array!
   out_words = malloc(num_words * sizeof(uint8_t*));
+    if(out_words == NULL)
+  {
+	  printf("malloc returned NULL. 123654");
+	  exit(1);
+  }
   for (int i = 0; i < num_words; i++) {
     out_words[i] = malloc(4 * sizeof(uint8_t));
+	  if(out_words[i] == NULL)
+  {
+	  printf("malloc returned NULL. 1239999");
+	  exit(1);
+  }
   }
 
   for (int i = 0; i < n_k; i++) {
@@ -432,10 +452,23 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
 
   for (int i = n_k; i < num_words; i++) {
     memcpy(temp, out_words[i-1], n_b * sizeof(uint8_t));
+	if (n_k == 0)
+	{
+		printf("n_k is zero. cannot divide by zero");
+		exit(1);
+	}
+	else
+	{
     if (i % n_k == 0) {
       rot_word(temp);
       sub_word(temp);
-      temp[0] = temp[0] ^ r_con[i/n_k];
+	  if (n_k == 0)
+		{
+		printf("n_k is zero. cannot divide by zero");
+		exit(1);
+		}
+		else
+			temp[0] = temp[0] ^ r_con[i/n_k];
     }
     else if (n_k > 6 && (i % n_k) == 4) {
       sub_word(temp);
@@ -444,6 +477,7 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
     out_words[i][1] = out_words[i-n_k][1] ^ temp[1];
     out_words[i][2] = out_words[i-n_k][2] ^ temp[2];
     out_words[i][3] = out_words[i-n_k][3] ^ temp[3];
+    }
   }
 
   return out_words;
@@ -459,12 +493,21 @@ UTILS
 uint8_t *hex_string_to_bytes(char *hex_string) {
   const char *pos = hex_string;
   uint8_t *val;
-  size_t count = 0, max = strlen(hex_string)/2;
+  size_t count = 0;
+  const size_t  max = strlen(hex_string)/2;
 
   val = malloc(strlen(hex_string)/2 * sizeof(uint8_t));
-
+  if(val == NULL)
+  {
+	  printf("malloc returned NULL. 12365444");
+	  exit(1);
+  }
   for(count = 0; count < max; count++) {
-    sscanf(pos, "%2hhx", &val[count]);
+    if (sscanf(pos, "%2hhx", &val[count]) == EOF)
+		{
+			printf("sscanf returned EOF.");
+			exit(1);
+		}
     pos += 2;
   }
 
@@ -484,7 +527,7 @@ MAIN
 
 int main(int argc, char **argv) {
   int opt, k_flag = 0, p_flag = 0, d_flag = 0;
-  uint8_t *in_block = NULL, *out_block = NULL, *key = NULL;
+  uint8_t *in_block = NULL, *key = NULL;
   int keylen;                            // Key length in bits
   uint8_t n_k;                           // Key length in bytes
   uint8_t n_r;                           // Number of rounds
@@ -547,12 +590,16 @@ int main(int argc, char **argv) {
     case 256:
       n_k = 8;      n_r = 14;
       break;
+	default:
+	printf("keylen is not 128/192/256.");
+	exit(1);
   }
 
   key_schedule = key_expansion(key, n_k, n_r);
 
   if (d_flag)
-    inv_cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
+    inv_cipher(in_block, key_schedule, n_k, n_r);
   else
-    cipher(out_block, in_block, key_schedule, n_b, n_k, n_r);
+    cipher(in_block, key_schedule, n_k, n_r);
 }
+
