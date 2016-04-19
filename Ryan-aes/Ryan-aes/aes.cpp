@@ -89,7 +89,12 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 
 	for (count = 0; count < max; count++)
 	{
-		sscanf(pos, "%2hhx", &val[count]);//scaned from  pos. get two characters and turn them into Hexadecimal. place into val[count]
+		if (sscanf(pos, "%2hhx", &val[count]) == EOF)//scaned from  pos. get two characters and turn them into Hexadecimal. place into val[count]
+		{
+			printf("sscanf returned EOF.");
+			exit(1);
+		}
+		
 		pos += 2;//get next two characters
 	}
 
