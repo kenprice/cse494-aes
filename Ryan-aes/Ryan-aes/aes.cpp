@@ -81,7 +81,7 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 	size_t max = strlen(hex_string) / 2;//how far do we need to iterate
 
 	val = (uint8_t *)malloc(strlen(hex_string) / 2 * sizeof(uint8_t));//allocate memory
-	if(val == NULL)
+	if (val == NULL)
 	{
 		printf("malloc returned null. 123");
 		exit(1);
@@ -363,21 +363,35 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 	for (int i = n_k; i < num_words; i++)
 	{
 		memcpy(temp, out_words[i - 1], n_b * sizeof(uint8_t));
-		if (i % n_k == 0)
+		if (n_k == 0)
 		{
-			//temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
-			rotate(temp);
-			sub_word(temp);
-			temp[0] = temp[0] ^ RoundConstant[i / n_k];
+			printf("n_k is zero. cannot divide by zero");
+			exit(1);
 		}
-		else if (n_k > 6 && (i % n_k) == 4)
+		else
 		{
-			sub_word(temp);
+			if (i % n_k == 0)
+			{
+				//temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
+				rotate(temp);
+				sub_word(temp);
+				if (n_k == 0)
+				{
+					printf("n_k is zero. cannot divide by zero");
+					exit(1);
+				}
+				else
+					temp[0] = temp[0] ^ RoundConstant[i / n_k];
+			}
+			else if (n_k > 6 && (i % n_k) == 4)
+			{
+				sub_word(temp);
+			}
+			out_words[i][0] = out_words[i - n_k][0] ^ temp[0];
+			out_words[i][1] = out_words[i - n_k][1] ^ temp[1];
+			out_words[i][2] = out_words[i - n_k][2] ^ temp[2];
+			out_words[i][3] = out_words[i - n_k][3] ^ temp[3];
 		}
-		out_words[i][0] = out_words[i - n_k][0] ^ temp[0];
-		out_words[i][1] = out_words[i - n_k][1] ^ temp[1];
-		out_words[i][2] = out_words[i - n_k][2] ^ temp[2];
-		out_words[i][3] = out_words[i - n_k][3] ^ temp[3];
 	}
 
 	return out_words;
@@ -674,7 +688,7 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, 
 		debug_print_key_schedule_dec(key_schedule, n_r);
 		printf("\n");
 	}
-		
+
 
 
 	for (int rnd = 1; rnd < n_r; rnd++)
