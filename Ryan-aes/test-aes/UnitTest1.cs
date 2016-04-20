@@ -40,9 +40,9 @@ namespace Project4Test
 
         private string exeName = "Ryan-aes.exe";//name of the complied project. It is usually named after the project name. Varies person to person.
         [TestMethod]
-        public void Encrypt_test1()
+        public void Encrypt_test128()
         {
-            String baseFile = "EncTest1.txt";
+            String baseFile = "EncTest128.txt";
             String pathToExe = baseDir + @"\Debug\" + exeName;
 
             inputArgs input;
@@ -58,13 +58,85 @@ namespace Project4Test
                 Assert.Inconclusive(Inconclusive);
         }
         [TestMethod]
-        public void Decrypt_test1()
+        public void Encrypt_test192()
         {
-            String baseFile = "DecTest1.txt";
+            String baseFile = "EncTest192.txt";
+            String pathToExe = baseDir + @"\Debug\" + exeName;
+
+            inputArgs input;
+            input.args = "-k 000102030405060708090a0b0c0d0e0f1011121314151617 -i 00112233445566778899aabbccddeeff";
+
+
+            String outputFilePath = baseTestsDir + baseFile + ".out";
+            String expectedOutputPath = baseTestsDir + baseFile + ".expected";
+            ProcessTestCase(pathToExe, input, outputFilePath);
+            if (allToConsole == false)
+                Assert.AreEqual(true, FileCompare(outputFilePath, expectedOutputPath));//true means files are same
+            else
+                Assert.Inconclusive(Inconclusive);
+        }
+        [TestMethod]
+        public void Encrypt_test256()
+        {
+            String baseFile = "EncTest256.txt";
+            String pathToExe = baseDir + @"\Debug\" + exeName;
+
+            inputArgs input;
+            input.args = "-k 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f -i 00112233445566778899aabbccddeeff";
+
+
+            String outputFilePath = baseTestsDir + baseFile + ".out";
+            String expectedOutputPath = baseTestsDir + baseFile + ".expected";
+            ProcessTestCase(pathToExe, input, outputFilePath);
+            if (allToConsole == false)
+                Assert.AreEqual(true, FileCompare(outputFilePath, expectedOutputPath));//true means files are same
+            else
+                Assert.Inconclusive(Inconclusive);
+        }
+        [TestMethod]
+        public void Decrypt_test128()
+        {
+            String baseFile = "DecTest128.txt";
             String pathToExe = baseDir + @"\Debug\" + exeName;
 
             inputArgs input;
             input.args = "-d -k 000102030405060708090a0b0c0d0e0f -i 69c4e0d86a7b0430d8cdb78070b4c55a";
+
+
+            String outputFilePath = baseTestsDir + baseFile + ".out";
+            String expectedOutputPath = baseTestsDir + baseFile + ".expected";
+            ProcessTestCase(pathToExe, input, outputFilePath);
+            if (allToConsole == false)
+                Assert.AreEqual(true, FileCompare(outputFilePath, expectedOutputPath));//true means files are same
+            else
+                Assert.Inconclusive(Inconclusive);
+        }
+        [TestMethod]
+        public void Decrypt_test192()
+        {
+            String baseFile = "DecTest192.txt";
+            String pathToExe = baseDir + @"\Debug\" + exeName;
+
+            inputArgs input;
+            input.args = "-d -k 000102030405060708090a0b0c0d0e0f1011121314151617 -i dda97ca4864cdfe06eaf70a0ec0d7191";
+
+
+            String outputFilePath = baseTestsDir + baseFile + ".out";
+            String expectedOutputPath = baseTestsDir + baseFile + ".expected";
+            ProcessTestCase(pathToExe, input, outputFilePath);
+            if (allToConsole == false)
+                Assert.AreEqual(true, FileCompare(outputFilePath, expectedOutputPath));//true means files are same
+            else
+                Assert.Inconclusive(Inconclusive);
+        }
+        [TestMethod]
+        public void Decrypt_test256()
+        {
+            String baseFile = "DecTest256.txt";
+            String pathToExe = baseDir + @"\Debug\" + exeName;
+
+            inputArgs input;
+            input.args = "-d -k 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f -i 8ea2b7ca516745bfeafc49904b496089";
 
 
             String outputFilePath = baseTestsDir + baseFile + ".out";

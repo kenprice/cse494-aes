@@ -81,15 +81,16 @@ uint8_t *hex_string_to_bytes(char *hex_string)
 	size_t max = strlen(hex_string) / 2;//how far do we need to iterate
 
 	val = (uint8_t *)malloc(strlen(hex_string) / 2 * sizeof(uint8_t));//allocate memory
-	if (val == NULL)
+	if (val == NULL)//EXP34-C. Do not dereference null pointers. Verify that the malloc does not return NULL
 	{
-		printf("malloc returned null. 123");
+		printf("malloc returned null. hex_string_to_bytes");
 		exit(1);
 	}
 
 	for (count = 0; count < max; count++)
 	{
-		if (sscanf(pos, "%2hhx", &val[count]) == EOF)//scaned from  pos. get two characters and turn them into Hexadecimal. place into val[count]
+		//sscanf(pos, "%2hhx", &val[count]); EXP12 - C.Do not ignore values returned by functions
+		if (sscanf(pos, "%2hhx", &val[count]) == EOF)//scaned from pos. get two characters and turn them into Hexadecimal. place into val[count]
 		{
 			printf("sscanf returned EOF.");
 			exit(1);
@@ -184,12 +185,11 @@ void debug_print_key_schedule(uint8_t **key_schedule, int rnd)
 		printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
 	}
 }
-void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd)
+void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd, int n_r)
 {
 	if (!DEBUG) return;
 
-	int printnum = 10 - rnd;
-	if (rnd == 10)//if it is 10, print out 0
+	if (n_r == -1)//starting position, print out 0
 	{
 		printf("round[%2d].ik_sch ", 0);
 		for (int j = rnd * 4; j < n_b + rnd * 4; j++)
@@ -197,28 +197,16 @@ void debug_print_key_schedule_dec(uint8_t **key_schedule, int rnd)
 			printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
 		}
 	}
+
 	else
 	{
-		if (rnd == 0)//if it is 0, print out 10
+		int printnum = n_r - rnd;
+		printf("round[%2d].ik_sch ", rnd);
+		for (int j = printnum * 4; j < n_b + printnum * 4; j++)
 		{
-			printf("round[%2d].ik_sch ", 10);
-			for (int j = rnd * 4; j < n_b + rnd * 4; j++)
-			{
-				printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
-			}
-		}
-		else
-		{
-			printf("round[%2d].ik_sch ", rnd);
-			for (int j = printnum * 4; j < n_b + printnum * 4; j++)
-			{
-				printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
-			}
+			printf("%02x%02x%02x%02x", key_schedule[j][0], key_schedule[j][1], key_schedule[j][2], key_schedule[j][3]);
 		}
 	}
-
-
-
 
 }
 
@@ -239,6 +227,7 @@ static uint8_t multiply(uint8_t t1, uint8_t t2)
 		/* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
 		if (b & 1)
 		{
+			//p ^= a; This does not comply with INT13-C. Use bitwise operators only on unsigned operands
 			p = a ^ p; /* since we're in GF(2^m), addition is an XOR */
 		}
 
@@ -341,17 +330,17 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 
 	// need to cast to uint8 for c++
 	out_words = (uint8_t **)malloc(num_words * sizeof(uint8_t*));
-	if (out_words == NULL)
+	if (out_words == NULL)//EXP34-C. Do not dereference null pointers. Verify that the malloc does not return NULL
 	{
-		printf("malloc returned null. 12322");
+		printf("malloc returned null in key_expansion");
 		exit(1);
 	}
 	for (int i = 0; i < num_words; i++)
 	{
 		out_words[i] = (uint8_t *)malloc(4 * sizeof(uint8_t));//allocate memory
-		if (out_words[i] == NULL)
+		if (out_words[i] == NULL)//EXP34-C. Do not dereference null pointers. Verify that the malloc does not return NULL
 		{
-			printf("malloc returned null. 1233432");
+			printf("malloc returned null in key_expansion");
 			exit(1);
 		}
 	}
@@ -368,7 +357,7 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 	for (int i = n_k; i < num_words; i++)
 	{
 		memcpy(temp, out_words[i - 1], n_b * sizeof(uint8_t));
-		if (n_k == 0)
+		if (n_k == 0)//comply with INT33-C. Ensure that division and remainder operations do not result in divide-by-zero errors
 		{
 			printf("n_k is zero. cannot divide by zero");
 			exit(1);
@@ -380,7 +369,7 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r)
 				//temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
 				rotate(temp);
 				sub_word(temp);
-				if (n_k == 0)
+				if (n_k == 0)//comply with INT33-C. Ensure that division and remainder operations do not result in divide-by-zero errors
 				{
 					printf("n_k is zero. cannot divide by zero");
 					exit(1);
@@ -437,6 +426,12 @@ void add_round_key(uint8_t *state, uint8_t **key_schedule, uint8_t rnd)//XORs ea
 	{
 		uint8_t stateIndex = i*n_b + 0;
 		uint8_t keyIndex = rnd * n_b + i;
+		//This does not comply with INT13-C. Use bitwise operators only on unsigned operands
+		// state[stateIndex] ^= key_schedule[keyIndex][0];
+		// state[i*n_b + 1] ^= key_schedule[keyIndex][1];
+		// state[i*n_b + 2] ^= key_schedule[keyIndex][2];
+		// state[i*n_b + 3] ^= key_schedule[keyIndex][3];
+
 		state[stateIndex] = state[stateIndex] ^ key_schedule[keyIndex][0];
 		state[i*n_b + 1] = state[i*n_b + 1] ^ key_schedule[keyIndex][1];
 		state[i*n_b + 2] = state[i*n_b + 2] ^ key_schedule[keyIndex][2];
@@ -485,6 +480,7 @@ void shift_rows(uint8_t *state)
 
 void mix_columns(uint8_t *state)
 {
+	//uint8_t a[] = { 0x02, 0x03, 0x01, 0x01 }; Does not comply with ARR02-C. Explicitly specify array bounds, even if implicitly defined by an initializer
 	uint8_t a[4] = { 0x02, 0x03, 0x01, 0x01 };
 	uint8_t i, j, col[4], res[4];
 
@@ -511,7 +507,7 @@ void mix_columns(uint8_t *state)
 		}
 	}
 }
-
+//void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) DCL02-C. Use visually distinct identifiers. n_b can be either global or local
 void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r)
 {
 	uint8_t *state = out;//create alias to make it it easy to not rename the variables below
@@ -526,8 +522,8 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint
 	if (DEBUG)
 		debug_print_key_schedule(key_schedule, 0);
 
-
-	for (int rnd = 1; rnd < n_r; rnd++)
+	int rnd;
+	for (rnd = 1; rnd < n_r; rnd++)
 	{
 		if (DEBUG)
 		{
@@ -563,16 +559,16 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint
 
 	if (DEBUG)
 	{
-		printf("\n\nround[10]");
+		printf("\n\nround[%2d]", rnd);
 		debug_print_block(state, ".start ");
-		printf("round[10]");
+		printf("round[%2d]", rnd);
 	}
 
 	sub_bytes(state);
 	if (DEBUG)
 	{
 		debug_print_block(state, ".s_box ");
-		printf("round[10]");
+		printf("round[%2d]", rnd);
 	}
 	shift_rows(state);
 	if (DEBUG)
@@ -580,9 +576,11 @@ void cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint
 
 	add_round_key(state, key_schedule, n_r);
 	if (DEBUG)
-		debug_print_key_schedule(key_schedule, 10);
-
-	debug_print_block(state, "\nround[10].output ");
+	{
+		debug_print_key_schedule(key_schedule, rnd);
+		printf("\n\nround[%2d]", rnd);
+		debug_print_block(state, ".output ");
+	}
 }
 
 /*
@@ -648,6 +646,7 @@ void inv_shift_rows(uint8_t *state)
 
 void inv_mix_columns(uint8_t *state)
 {
+	//uint8_t a[] = { 0x0e, 0x0b, 0x0d, 0x09 }; Does not comply with ARR02-C. Explicitly specify array bounds, even if implicitly defined by an initializer
 	uint8_t a[4] = { 0x0e, 0x0b, 0x0d, 0x09 };
 	uint8_t i, j, col[4], res[4];
 
@@ -675,6 +674,7 @@ void inv_mix_columns(uint8_t *state)
 		}
 	}
 }
+//void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_b, uint8_t n_k, uint8_t n_r) DCL02-C. Use visually distinct identifiers. n_b can be either global or local
 
 void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r)
 {
@@ -690,13 +690,13 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, 
 	add_round_key(in, key_schedule, n_r);
 	if (DEBUG)
 	{
-		debug_print_key_schedule_dec(key_schedule, n_r);
+		debug_print_key_schedule_dec(key_schedule, n_r, -1);
 		printf("\n");
 	}
 
 
-
-	for (int rnd = 1; rnd < n_r; rnd++)
+	int rnd;
+	for (rnd = 1; rnd < n_r; rnd++)
 	{
 		if (DEBUG)
 		{
@@ -721,7 +721,7 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, 
 		add_round_key(in, key_schedule, n_r - rnd);
 
 		if (DEBUG)
-			debug_print_key_schedule_dec(key_schedule, rnd);
+			debug_print_key_schedule_dec(key_schedule, rnd, n_r);
 
 		if (DEBUG)
 		{
@@ -734,16 +734,16 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, 
 
 	if (DEBUG)
 	{
-		printf("\nround[10]");
+		printf("\nround[%2d]", rnd);
 		debug_print_block(in, ".istart ");
-		printf("round[10]");
+		printf("round[%2d]", rnd);
 	}
 
 	inv_shift_rows(in);
 	if (DEBUG)
 	{
 		debug_print_block(in, ".is_row ");
-		printf("round[10]");
+		printf("round[%2d]", rnd);
 	}
 	inv_sub_bytes(in);
 	if (DEBUG)
@@ -751,9 +751,11 @@ void inv_cipher(uint8_t *out, uint8_t *in, uint8_t **key_schedule, uint8_t n_k, 
 
 	add_round_key(in, key_schedule, 0);
 	if (DEBUG)
-		debug_print_key_schedule_dec(key_schedule, 0);
-
-	debug_print_block(in, "\nround[10].ioutput ");
+	{
+		debug_print_key_schedule_dec(key_schedule, rnd, n_r);
+		printf("\nround[%2d]", rnd);
+		debug_print_block(in, ".ioutput ");
+	}
 }
 
 
@@ -801,9 +803,9 @@ void process_arguments(int argc, char **argv, struct package *payload)
 
 		payload->in_block = hex_string_to_bytes(argv[base_index]);
 		payload->out_block = (uint8_t *)malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-		if (payload->out_block == NULL)
+		if (payload->out_block == NULL)//EXP34-C. Do not dereference null pointers. Verify that the malloc does not return NULL
 		{
-			printf("malloc returned null. 1267773");
+			printf("malloc returned NULL in process_arguments");
 			exit(1);
 		}
 		memcpy(payload->out_block, payload->in_block, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
@@ -825,7 +827,7 @@ void process_arguments(int argc, char **argv, struct package *payload)
 	case 256:
 		payload->n_k = 8;      payload->n_r = 14;
 		break;
-	default:
+	default://There must be a default case to comply with MSC01-C. Strive for logical completeness
 		printf("keylen is not 128/192/256.");
 		exit(1);
 	}
