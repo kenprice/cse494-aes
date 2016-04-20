@@ -174,10 +174,9 @@ void cipher(uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r) {
   uint8_t *state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-  if(state == NULL)
-  {
-	  printf("malloc returned NULL. 123");
-	  exit(1);
+  if(state == NULL) {
+    printf("malloc returned NULL in cipher");
+    exit(1);
   }
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
@@ -324,10 +323,9 @@ void inv_cipher(uint8_t *in, uint8_t **key_schedule, uint8_t n_k, uint8_t n_r) {
   uint8_t *state;
 
   state = malloc(BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
-   if(state == NULL)
-  {
-	  printf("malloc returned NULL. 12355");
-	  exit(1);
+  if(state == NULL) {
+    printf("malloc returned NULL in inv_cipher");
+    exit(1);
   }
   memcpy(state, in, BLOCK_LENGTH_IN_BYTES * sizeof(uint8_t));
 
@@ -428,18 +426,16 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
 
   // Let's allocate space for this word array!
   out_words = malloc(num_words * sizeof(uint8_t*));
-    if(out_words == NULL)
-  {
-	  printf("malloc returned NULL. 123654");
-	  exit(1);
+  if(out_words == NULL) {
+    printf("malloc returned NULL in key_expansion");
+    exit(1);
   }
   for (int i = 0; i < num_words; i++) {
     out_words[i] = malloc(4 * sizeof(uint8_t));
-	  if(out_words[i] == NULL)
-  {
-	  printf("malloc returned NULL. 1239999");
-	  exit(1);
-  }
+    if(out_words[i] == NULL) {
+      printf("malloc returned NULL in key_expansion");
+      exit(1);
+    }
   }
 
   for (int i = 0; i < n_k; i++) {
@@ -452,23 +448,18 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
 
   for (int i = n_k; i < num_words; i++) {
     memcpy(temp, out_words[i-1], n_b * sizeof(uint8_t));
-	if (n_k == 0)
-	{
-		printf("n_k is zero. cannot divide by zero");
-		exit(1);
-	}
-	else
-	{
+    if (n_k == 0) {
+      printf("n_k is zero. cannot divide by zero");
+      exit(1);
+    }
     if (i % n_k == 0) {
       rot_word(temp);
       sub_word(temp);
-	  if (n_k == 0)
-		{
-		printf("n_k is zero. cannot divide by zero");
-		exit(1);
-		}
-		else
-			temp[0] = temp[0] ^ r_con[i/n_k];
+      if (n_k == 0) {
+        printf("n_k is zero. cannot divide by zero");
+        exit(1);
+      }
+      temp[0] = temp[0] ^ r_con[i/n_k];
     }
     else if (n_k > 6 && (i % n_k) == 4) {
       sub_word(temp);
@@ -477,7 +468,6 @@ uint8_t **key_expansion(uint8_t *key, uint8_t n_k, uint8_t n_r) {
     out_words[i][1] = out_words[i-n_k][1] ^ temp[1];
     out_words[i][2] = out_words[i-n_k][2] ^ temp[2];
     out_words[i][3] = out_words[i-n_k][3] ^ temp[3];
-    }
   }
 
   return out_words;
@@ -497,17 +487,15 @@ uint8_t *hex_string_to_bytes(char *hex_string) {
   const size_t  max = strlen(hex_string)/2;
 
   val = malloc(strlen(hex_string)/2 * sizeof(uint8_t));
-  if(val == NULL)
-  {
-	  printf("malloc returned NULL. 12365444");
-	  exit(1);
+  if(val == NULL) {
+    printf("malloc returned NULL in hex_string_to_bytes");
+    exit(1);
   }
   for(count = 0; count < max; count++) {
-    if (sscanf(pos, "%2hhx", &val[count]) == EOF)
-		{
-			printf("sscanf returned EOF.");
-			exit(1);
-		}
+    if (sscanf(pos, "%2hhx", &val[count]) == EOF) {
+      printf("sscanf returned EOF.");
+      exit(1);
+    }
     pos += 2;
   }
 
@@ -590,9 +578,9 @@ int main(int argc, char **argv) {
     case 256:
       n_k = 8;      n_r = 14;
       break;
-	default:
-	printf("keylen is not 128/192/256.");
-	exit(1);
+    default:
+      printf("keylen is not 128/192/256.");
+      exit(1);
   }
 
   key_schedule = key_expansion(key, n_k, n_r);
@@ -602,4 +590,3 @@ int main(int argc, char **argv) {
   else
     cipher(in_block, key_schedule, n_k, n_r);
 }
-
